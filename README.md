@@ -8,7 +8,7 @@ Pre-trained models are available for:
 
 ## Dependencies
 
-All dependencies need to be installed for proper execution of the code. Installation guidelines for these dependencies are provided in the repository. The script supports both GPU and CPU data processing, with notable runtime improvements achievable when utilizing GPUs. The reported predictions were conducted on Ubuntu 24.04 with GPU support, but have also been tested on Ubuntu 24.04 and MacOSX 12.3 without GPU support.
+All dependencies need to be installed for proper execution of the code. The script supports both GPU and CPU data processing, with notable runtime improvements achievable when utilizing GPUs. Training of pre-trained models was conducted on Ubuntu 24.04 with GPU support, but have also been tested on Ubuntu 24.04 and MacOSX 12.3 without GPU support.
 
 Here an example to install in a conda environment:
 
