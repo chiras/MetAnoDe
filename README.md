@@ -28,7 +28,7 @@ KERAS_BACKEND=tensorflow
 
 ## Predictions using pre-trained models 
 
-Predictions can be promptly generated using the pre-trained models available in the repository. 
+Predictions can be promptly generated using the pre-trained models available in the repository. Additional customizable options can be explored by running the script without additional arguments. 
 
 ```sh
 python mb_anomaly.py -query <query.fasta> -p <model_name>
@@ -36,8 +36,6 @@ python mb_anomaly.py -query <query.fasta> -p <model_name>
 ```<model_name``` corresponds to a pretrained model available in the subfolder ```models```.
 
 Adapter as well as primer sequences however need to be removed from data prior to analysis to match the model, as this varies between different amplicon library generation strategies. 
-
-By default, the software retains all sequences in the query data but annotates them based on their classification from each of the three models in the output. However, an option for sequence removal is also available. Additional customizable options can be explored by running the script without additional arguments. The software generates two output files stored in the 'predictions' subfolder: a comma-separated file (CSV) presenting classification results in tabular format, and a second file containing flagged sequences (or a subset if removal is opted) in FASTA format.
 
 ## Predictions with other target regions and new training of models
 
@@ -56,3 +54,7 @@ python mb_anomaly.py -query <query.fasta> \
 ```
 
 The script supports both GPU and CPU processing; however, it is important to note that CPU processing significantly extends the duration of model training. Therefore, for efficient training, GPU utilization is strongly recommended here. There is no strict limit on the number of reference sequences and their lengths or off-target classes that can be incorporated. However, the memory required for encoding and training could potentially be a constraint depending on the available hardware resources.
+
+## Output
+
+By default, the software retains all sequences in the query data but annotates them based on their classification from each of the three models in the output. However, an option for sequence removal is also available. The software generates two output files stored in the 'predictions' subfolder: a comma-separated file (CSV) presenting classification results in tabular format, and a second file containing flagged sequences (or a subset if removal is opted) in FASTA format.
