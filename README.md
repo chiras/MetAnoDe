@@ -14,8 +14,8 @@ Here an example to install in a conda environment:
 
 
 ```sh
-conda create --name NN_anomaly_detection python=3.9
-conda activate NN_anomaly_detection
+conda create --name metanode python=3.9
+conda activate metanode
 
 conda install tensorflow=2.16.1
 pip install keras==3.3.3
