@@ -36,7 +36,7 @@ Predictions can be promptly generated using the pre-trained models available in 
 ```sh
 python mb_anomaly.py -query <query.fasta> -p <model_name>
 ```
-```<model_name``` corresponds to a pretrained model available in the subfolder ```models```.
+```<model_name``` corresponds to a pretrained model available in the subfolder ```models``` (e.g 16S.silva.trim.derep.fa_OT or ITS2.Quaresma2024-Sickel2015_OT).
 
 Adapter as well as primer sequences however need to be removed from data prior to analysis to match the model, as this varies between different amplicon library generation strategies. 
 
