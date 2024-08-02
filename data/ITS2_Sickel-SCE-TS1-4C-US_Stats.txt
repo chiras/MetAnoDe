@@ -1,0 +1,24 @@
+Model Stats:
+Model Stats: CNN
+              precision    recall  f1-score   support
+
+           0       0.93      0.86      0.89     16456
+           1       0.62      0.58      0.60     16419
+           2       0.68      0.70      0.69     16386
+           3       0.78      0.88      0.82     15870
+
+    accuracy                           0.75     65131
+   macro avg       0.75      0.75      0.75     65131
+weighted avg       0.75      0.75      0.75     65131
+
+Model Stats: LSTM
+              precision    recall  f1-score   support
+
+           0       0.64      0.96      0.77     16456
+           1       0.53      0.67      0.59     16419
+           2       0.65      0.43      0.52     16386
+           3       0.52      0.29      0.37     15870
+
+    accuracy                           0.59     65131
+   macro avg       0.58      0.59      0.56     65131
+weighted avg       0.58      0.59      0.56     65131

@@ -1,0 +1,12 @@
+##### CNN #####:
+Model Stats:
+              precision    recall  f1-score   support
+
+           0       0.70      0.94      0.80     16534
+           1       0.87      0.76      0.81     16411
+           2       0.99      0.90      0.94     16301
+           3       0.96      0.82      0.89     16463
+
+    accuracy                           0.86     65709
+   macro avg       0.88      0.86      0.86     65709
+weighted avg       0.88      0.86      0.86     65709

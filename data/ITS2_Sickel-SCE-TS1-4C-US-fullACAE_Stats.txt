@@ -1,0 +1,39 @@
+
+##### CNN #####:
+Model Stats:
+              precision    recall  f1-score   support
+
+           0       0.71      0.90      0.79     32774
+           1       0.86      0.78      0.82     32663
+           2       0.99      0.94      0.97     32852
+           3       0.96      0.84      0.89     32634
+
+    accuracy                           0.86    130923
+   macro avg       0.88      0.86      0.87    130923
+weighted avg       0.88      0.86      0.87    130923
+##### LSTM #####:
+Model Stats:
+              precision    recall  f1-score   support
+
+           0       0.34      0.05      0.08     32774
+           1       0.75      0.68      0.71     32663
+           2       0.87      0.87      0.87     32852
+           3       0.45      0.89      0.60     32634
+
+    accuracy                           0.62    130923
+   macro avg       0.60      0.62      0.56    130923
+weighted avg       0.60      0.62      0.56    130923
+##### Ensemble #####:
+
+##### Ensemble #####:
+Model Stats:
+              precision    recall  f1-score   support
+
+           0       0.75      0.88      0.81     98130
+           1       0.91      0.85      0.88     98304
+           2       0.99      0.98      0.98     97895
+           3       0.94      0.85      0.89     98096
+
+    accuracy                           0.89    392425
+   macro avg       0.90      0.89      0.89    392425
+weighted avg       0.90      0.89      0.89    392425
