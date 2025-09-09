@@ -39,6 +39,12 @@ import pandas as pd
 from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
 
+if verbose:
+    print("## Devices available: ")
+    print(device_lib.list_local_devices())
+    print("CUDA version:")
+    print(tf.sysconfig.get_build_info()['cuda_version'])
+    
 def write_to_fasta(df: pd.DataFrame, filepath: str) -> None:
     with open(filepath, 'w') as file:
         for index, row in df.iterrows():
