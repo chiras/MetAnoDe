@@ -21,6 +21,7 @@ if verbose:
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  
 else: 
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+    os.environ['KERAS_BACKEND'] = 'tensorflow'
 
 import tensorflow as tf
 from tensorflow import keras
