@@ -5,7 +5,7 @@ import time
 start_time = time.time()
 
 parser = argparse.ArgumentParser(description="Amplicon Anomaly Detection")
-parser.add_argument('-db', dest='true_file', required=True, help="True Amplicon database FASTA file")
+parser.add_argument('-db', dest='true_file', required=False, help="True Amplicon database FASTA file")
 parser.add_argument('-query', dest='query_file', required=True, help="Amplicon database FASTA file")
 parser.add_argument('-p', dest='project_name', required=True, help="Model name")
 parser.add_argument('-4c', dest='four_classes', action='store_true', required=False, help="Switch from multiclass to binary (DEPRECEATED)")
