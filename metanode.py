@@ -128,8 +128,9 @@ if (balance_4C):
 else:
     labels = {0: 'positive', 1: 'false'}
 
-# labels = {0: 'positive', 1: 'substitution', 2: 'indels', 3: 'chimera', 4: 'mito', 5 : 'chloro'} # TODO fix in config
-labels = {0: 'positive', 1: 'substitution', 2: 'indels', 3: 'chimera', 4: 'fungi'} # TODO fix in config
+#labels = {0: 'positive', 1: 'substitution', 2: 'indels', 3: 'chimera', 4: 'mito', 5 : 'chloro'} # TODO fix in config ###### ---> 16S 
+labels = {0: 'positive', 1: 'substitution', 2: 'indels', 3: 'chimera', 4: 'fungi'} # TODO fix in config ###### ---> ITS2 
+
 
 # check existing models:
 
