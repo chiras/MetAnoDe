@@ -3,3 +3,6 @@ models
 */.DS_Store
 .DS_Store
 tuner
+._*
+models/ITS2*
+models/16S*
