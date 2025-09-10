@@ -8,21 +8,38 @@ Pre-trained models are available for:
 
 ## Dependencies
 
-All dependencies need to be installed for proper execution of the code. The script supports both GPU and CPU data processing, with notable runtime improvements achievable when utilizing GPUs. Training of pre-trained models was conducted on Ubuntu 24.04 with GPU support, but have also been tested on Ubuntu 24.04 and MacOSX 12.3 without GPU support.
+### Option 1: Use a docker container (recommened)
+
+```sh
+# build / rebuild (for including github updates) docker image
+docker build --no-cache -t metanode:tf-25.01 .
+
+# example: run container with GPU support
+docker run --gpus all  -v $PWD:/data  --user $(id -u):$(id -g) --rm metanode:tf-25.01 -query /data/<query.fasta>  -p <model_name> -t 20 
+
+# example: run container without GPU support
+docker run -v $PWD:/data  --user $(id -u):$(id -g) --rm metanode:tf-25.01 -query  /data/<query.fasta> -p <model_name> -t 20
+```
+
+[OPTIONAL, not recommended] Force overwrite pretrained files into ```/data```: add flag ```  -e PRETRAINED_OVERWRITE=1 ```
+
+
+### Option 2:  Use a conda environment (not recommended)
+
+All dependencies need to be installed for proper execution of the code. The script supports both GPU and CPU data processing, with notable runtime improvements achievable when utilizing GPUs. Training of pre-trained models was conducted on Ubuntu 24.04 with GPU support, but have also been tested on Ubuntu 22.04/24.04 with and without GPU support, and MacOSX 12.3 without GPU support.
 
 Here an example to install in a conda environment:
 
-
 ```sh
-conda create --name metanode python=3.9
+conda create --name metanode python=3.12
 conda activate metanode
 
-conda install tensorflow=2.16.1
+conda install tensorflow=2.17
 pip install keras==3.3.3
 conda install Numpy=1.23.5
 conda install Pandas=2.2.1
 conda install Scikit-learn=1.4.2
-conda install BioPython=1.78
+conda install BioPython=1.84
 conda install matplotlib=3.8.4
 pip install keras-tuner==1.4.7
 
@@ -34,7 +51,11 @@ KERAS_BACKEND=tensorflow
 Predictions can be promptly generated using the pre-trained models available in the repository. Additional customizable options can be explored by running the script without additional arguments. 
 
 ```sh
-python mb_anomaly.py -query <query.fasta> -p <model_name>
+# docker option, with GPU support
+docker run --gpus all  -v $PWD:/data --user $(id -u):$(id -g) --rm metanode:tf-25.01 -query <query.fasta> -p <model_name>
+
+# conda option
+python metanode.py -query <query.fasta> -p <model_name>
 ```
 ```<model_name``` corresponds to a pretrained model available in the subfolder ```models``` (e.g 16S.silva.trim.derep.fa_OT or ITS2.Quaresma2024-Sickel2015_OT).
 
@@ -50,7 +71,14 @@ To initiate the process, correctly trimmed and deduplicated reference sequences 
 An illustrative example of the software's call that involves both training models on new data and predicting query data in a unified execution:
 
 ```sh
-python mb_anomaly.py -query <query.fasta> \
+# docker option, with GPU support
+docker run --gpus all  -v $PWD:/data  --rm metanode:tf-25.01 -query <query.fasta>  \
+	-p <model_name> \
+	-db <ref.fasta> \
+	-ot <ot1.fasta>,<ot2.fasta>,<ot3.fasta>
+
+# conda option
+python metanode.py -query <query.fasta> \
 	-p <model_name> \
 	-db <ref.fasta> \
 	-ot <ot1.fasta>,<ot2.fasta>,<ot3.fasta>
@@ -61,3 +89,11 @@ The script supports both GPU and CPU processing; however, it is important to not
 ## Output
 
 By default, the software retains all sequences in the query data but annotates them based on their classification from each of the three models in the output. However, an option for sequence removal is also available. The software generates two output files stored in the 'predictions' subfolder: a comma-separated file (CSV) presenting classification results in tabular format, and a second file containing flagged sequences (or a subset if removal is opted) in FASTA format.
+
+## License
+
+This project provides a derived container based on
+`nvcr.io/nvidia/tensorflow:25.01-tf2-py3`.
+
+- For the docker option: NVIDIA components are licensed under the [NVIDIA Deep Learning Container License](docker/NVIDIA_Deep_Learning_Container_License.txt). See [docker/LICENSE_NOTICE](docker/LICENSE_NOTICE) for details.
+- Additional software (Python dependencies) is licensed under their respective open source licenses.

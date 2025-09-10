@@ -1,0 +1,58 @@
+LICENSE NOTICE
+==============
+
+This Docker image is a derived work based on the
+NVIDIA Deep Learning Container image:
+    nvcr.io/nvidia/tensorflow:25.01-tf2-py3
+
+The NVIDIA base container and all NVIDIA software components
+contained therein are licensed under the
+"NVIDIA Deep Learning Container License" (v. September 14, 2021).
+See: https://developer.nvidia.com/deep-learning-containers-license
+
+Redistribution and use of this derived container are subject to
+the following:
+
+1. Material Additional Functionality
+   ---------------------------------
+   This container extends the NVIDIA base image with additional
+   software and functionality, including:
+     - Installation of Python packages (Keras, Keras Tuner, Matplotlib,
+       Biopython, Pandas, scikit-learn, etc.).
+     - Inclusion of the MetAnoDe software (https://github.com/chiras/MetAnoDe),
+       for amplicon anomaly detection and model training/prediction.
+     - Pretrained models, training utilities, and plotting functions.
+
+   These additions provide material functionality beyond the NVIDIA
+   base container.
+
+2. NVIDIA License Terms
+   --------------------
+   All NVIDIA software included in this image remains subject to
+   the NVIDIA Deep Learning Container License. In particular:
+     - This image may not be redistributed as a stand-alone NVIDIA
+       container.
+     - NVIDIA proprietary software (e.g. CUDA, cuDNN, TensorRT) may
+       only be run on systems with NVIDIA GPUs as permitted by the
+       license.
+     - All other terms and restrictions in the NVIDIA Deep Learning
+       Container License apply.
+
+3. Additional Software
+   -------------------
+   The added software components (MetAnoDe and associated Python
+   dependencies) are distributed under their respective licenses.
+   Please refer to the MetAnoDe repository and the individual
+   Python packages for license information.
+
+4. No Endorsement
+   ---------------
+   This project is not sponsored or endorsed by NVIDIA Corporation.
+
+---
+
+Summary: This derived container combines the NVIDIA TensorFlow
+container with MetAnoDe and additional open source software for
+bioinformatics applications. Use of the NVIDIA software remains
+governed by NVIDIA’s license; use of MetAnoDe and other open source
+components is governed by their respective licenses.
