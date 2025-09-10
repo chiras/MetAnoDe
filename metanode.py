@@ -159,12 +159,21 @@ def split_dataset(dataset, test_ratio=0.25):
 
 sequences_dict_query = helper.read_fasta(args.query_file, 99, 99)
 
+# logging on command line and to file
+timestamp = time.strftime("%Y%m%d.%H%M%S")
+logfile = f"{project_name}.{timestamp}.log"
+os.makedirs("logs", exist_ok=True)
+logfile_path = os.path.join("logs", logfile)
+
 def logger():
-    global project_name
-    global start_time
+    global project_name, start_time, logfile_path
     elapsed_time = int(time.time() - start_time)
     formatted_time = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
     string = f"[AD-DNN: {project_name}: {formatted_time}]"
+
+    with open(logfile_path, "a") as f:
+        f.write(string + "\n")
+
     return string
 
 
