@@ -422,16 +422,16 @@ else:
         
     cnn_tuner.search(X_train_padded, y_train, epochs=max_epoch_tuner, batch_size=64, validation_data=(X_valid_padded, y_valid), callbacks=[stop_early])
     best_hps=cnn_tuner.get_best_hyperparameters(num_trials=1)[0]
-    print(f'{logger()} CNN Hyperparameter Tuning completed\n\n')
+    log(f' CNN Hyperparameter Tuning completed\n\n')
     log(f"{best_hps.values}")
 
     cnn_model = cnn_tuner.hypermodel.build(best_hps)
     cnn_history = cnn_model.fit(X_train_padded, y_train, batch_size=64, epochs=max_epoch, validation_data=(X_valid_padded, y_valid))
-    print(f'{logger()} CNN Model completed\n\n')
+    log(f' CNN Model completed\n\n')
 
     val_acc_per_epoch = cnn_history.history['val_accuracy']
     best_epoch = val_acc_per_epoch.index(max(val_acc_per_epoch)) + 1
-    print(f'{logger()} Best epoch: %d' % (best_epoch,))
+    log(f' Best epoch: %d' % (best_epoch,))
 
     cnn_model.save(model_path)  # Save the model to a HDF5 file
     log(f"CNN Model saved successfully.")
@@ -471,7 +471,7 @@ else:
 
     lstm_tuner.search(X_train_padded, y_train, batch_size=64, epochs=max_epoch_tuner, validation_data=(X_valid_padded, y_valid), callbacks=[stop_early])
     best_hps=lstm_tuner.get_best_hyperparameters(num_trials=1)[0]
-    print(f'{logger()} LSTM Hyperparameter Tuning completed\n\n')
+    log(f' LSTM Hyperparameter Tuning completed\n\n')
     log(f"{best_hps.values}")
 
     lstm_model = lstm_tuner.hypermodel.build(best_hps)
@@ -479,8 +479,8 @@ else:
 
     val_acc_per_epoch = lstm_history.history['val_accuracy']
     best_epoch = val_acc_per_epoch.index(max(val_acc_per_epoch)) + 1
-    print(f'{logger()} Best epoch: %d' % (best_epoch,))
-    print(f'{logger()} LSTM Model completed\n\n')
+    log(f' Best epoch: %d' % (best_epoch,))
+    log(f' LSTM Model completed\n\n')
 
     lstm_model.save(model_path)  # Save the model to a HDF5 file
     log(f"Model saved successfully.")
