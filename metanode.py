@@ -34,9 +34,12 @@ else:
     SEED = int(args.seed)
 
 os.environ["PYTHONHASHSEED"] = str(SEED)
+random.seed(SEED)
+np.random.seed(SEED)
 
 import tensorflow as tf
 from tensorflow.python.client import device_lib
+tf.random.set_seed(SEED)
 
 import keras
 #from tensorflow import keras
@@ -51,11 +54,6 @@ from modules import model_builders
 
 from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
-
-
-random.seed(SEED)
-np.random.seed(SEED)
-tf.random.set_seed(SEED)
 
 if verbose:
     print("## Devices available: ")
