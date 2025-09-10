@@ -185,8 +185,8 @@ def log(msg: str):
 
 # load in reference data
 if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, config_exist]):
-    log("\n");log("Not all required models and configs are available, regenerating necessary ones")
-    log("This might take a while, depending on whether models are missing or need to be tuned...")
+    log(f"\n");log(f"Not all required models and configs are available, regenerating necessary ones")
+    log(f"This might take a while, depending on whether models are missing or need to be tuned...")
 
     # TODO check for ref db file
     config = {}
@@ -200,21 +200,21 @@ if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, conf
     if not balance_4C:
         max_rows = int(max_rows/3)
 
-    log("\n");log("Received {len(sequences_dict_true)} original sequences (Class 0)")
+    log(f"\n");log(f"Received {len(sequences_dict_true)} original sequences (Class 0)")
 
     sequences_dict_f1_balanced = helper.create_artificial_errorate(sequences_dict_true, max_rows, "subst")
-    log("Created {len(sequences_dict_f1_balanced)} artifical high substitution rate sequences (Class 1)")
+    log(f"Created {len(sequences_dict_f1_balanced)} artifical high substitution rate sequences (Class 1)")
 
     sequences_dict_f2_balanced = helper.create_artificial_errorate(sequences_dict_true, max_rows, "indel")
-    log("Created {len(sequences_dict_f2_balanced)} artifical high indel rate sequences (Class 2)")
+    log(f"Created {len(sequences_dict_f2_balanced)} artifical high indel rate sequences (Class 2)")
 
     sequences_dict_f3_balanced = helper.create_artificial_chimera(sequences_dict_true, max_rows)
-    log("Created {len(sequences_dict_f3_balanced)} artifical chimeric sequences (Class 3)")
+    log(f"Created {len(sequences_dict_f3_balanced)} artifical chimeric sequences (Class 3)")
 
     sequences_dict_true_lowsubst = helper.create_artificial_errorate(sequences_dict_true, int(tr_len/2), "lowsubst")
     sequences_dict_true_lowindel = helper.create_artificial_errorate(sequences_dict_true, int(tr_len/2), "lowindel")
     sequences_dict_true_balanced = pd.concat([sequences_dict_true, sequences_dict_true_lowsubst, sequences_dict_true_lowindel], ignore_index=True)
-    log("Created {len(sequences_dict_true_lowsubst)} + {len(sequences_dict_true_lowindel)} artifical low error sequences (Class 0)")
+    log(f"Created {len(sequences_dict_true_lowsubst)} + {len(sequences_dict_true_lowindel)} artifical low error sequences (Class 0)")
 
     if args.offtargets is not None:
         split_list = args.offtargets.split(',')
@@ -236,7 +236,7 @@ if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, conf
             sequences_dict_offtarget["Target4D"]= i 
             sequences_dict_offtarget["Target"]= 1
             labels[i] = f"OffTarget-{i}"
-            log("Added {len_ot} {type_ot} Off-target Class {i} ({offtarget})")
+            log(f"Added {len_ot} {type_ot} Off-target Class {i} ({offtarget})")
             i=i+1
             sequences_dict_offtarget_all = pd.concat([sequences_dict_offtarget_all, sequences_dict_offtarget], ignore_index=True)
             del sequences_dict_offtarget
@@ -248,8 +248,8 @@ if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, conf
     config["max_len"] = max(len(seq) for seq in (X_train_balanced["sequences"]))
     config["output_dim"] = final_dim = X_train_balanced["Target4D"].nunique()
     config["labels"] = labels
-    log("Balanced to ({final_dim} class mode: {balance_4C}): {len(sequences_dict_true_balanced)}, {len(sequences_dict_f1_balanced)}, {len(sequences_dict_f2_balanced)}, {len(sequences_dict_f3_balanced)}, {len(sequences_dict_offtarget_all)}")
-    log("Class labels: {labels}")
+    log(f"Balanced to ({final_dim} class mode: {balance_4C}): {len(sequences_dict_true_balanced)}, {len(sequences_dict_f1_balanced)}, {len(sequences_dict_f2_balanced)}, {len(sequences_dict_f3_balanced)}, {len(sequences_dict_offtarget_all)}")
+    log(f"Class labels: {labels}")
 
     # remove temporary data from memory
     del sequences_dict_f1_balanced
@@ -259,15 +259,15 @@ if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, conf
     del sequences_dict_true_lowindel
     del sequences_dict_true_balanced
     del sequences_dict_offtarget_all
-    log("Removed temporary data from memory")
+    log(f"Removed temporary data from memory")
 
     # Shuffle the concatenated DataFrame
     X_train_balanced = shuffle(X_train_balanced, random_state=42).reset_index(drop=True)
     X_train_balanced = shuffle(X_train_balanced, random_state=42).reset_index(drop=True)
-    log("Shuffled data")
+    log(f"Shuffled data")
 
     X_train_balanced, X_valid_balanced = split_dataset(X_train_balanced)
-    log("Split data to train and validation")
+    log(f"Split data to train and validation")
 
     # if verbose:
     #     X_train_balanced = helper.sample_dataframe(X_train_balanced, 7500)
@@ -305,10 +305,10 @@ if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, conf
     #del X_valid_balanced
     del X_train_final
     del X_valid_final
-    log("Removed temporary data from memory")
+    log(f"Removed temporary data from memory")
     
     # Fit tokenizer on training data
-    log("Encoding data")
+    log(f"Encoding data")
 
     if not token_exist:
         if kmer:
@@ -334,13 +334,13 @@ if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, conf
     print(encoded_characters) if verbose else None
 
     # Pad sequences
-    log("Padding data")
+    log(f"Padding data")
 
     X_train_encoded =  keras.preprocessing.sequence.pad_sequences(X_train_encoded, maxlen=config["max_len"], padding='post')
     X_valid_encoded =  keras.preprocessing.sequence.pad_sequences(X_valid_encoded, maxlen=config["max_len"], padding='post')  
 
     # convert to numpy arrays
-    log("Converting data")
+    log(f"Converting data")
     X_train_padded = np.array(X_train_encoded)
     X_valid_padded = np.array(X_valid_encoded)
 
@@ -375,7 +375,7 @@ if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, conf
     del X_valid_encoded
     #del X_train_padded
     #del X_valid_padded
-    log("Removed temporary data from memory")
+    log(f"Removed temporary data from memory")
 
 with open(token_path, 'rb') as token:
     encoder = pickle.load(token)    
@@ -386,8 +386,8 @@ with open(config_path, 'rb') as file:
 
 
 final_dim = config["output_dim"]
-log("Modeling {final_dim} Classes")
-log("Class labels: {labels}")
+log(f"Modeling {final_dim} Classes")
+log(f"Class labels: {labels}")
 
 # prepare query
 X_query_final = sequences_dict_query.drop(columns=['headers','Target','Target4D','sizes'])  # Features
@@ -405,9 +405,9 @@ if model_exist_cnn:
     # Try to load the saved model
     cnn_model = load_model(model_path)
     cnn_model.compile(optimizer=opt, loss=loss_func)
-    log("\n");log("CNN Model loaded successfully.")
+    log(f"\n");log(f"CNN Model loaded successfully.")
 else:
-    log("\n");log("CNN Model file not found. Creating a new model...")
+    log(f"\n");log(f"CNN Model file not found. Creating a new model...")
     cnn_hyper_model = model_builders.CNNHyperModel(n_timesteps=X_padded_reshaped.shape[1],loss_func=loss_func, final_dim=final_dim, final_activation=final_activation,n_features  = X_padded_reshaped.shape[2])
     metrics_callback = model_builders.MetricsCallback(test_data=X_valid_padded, y_true=y_valid, name=project_name)
 
@@ -423,7 +423,7 @@ else:
     cnn_tuner.search(X_train_padded, y_train, epochs=max_epoch_tuner, batch_size=64, validation_data=(X_valid_padded, y_valid), callbacks=[stop_early])
     best_hps=cnn_tuner.get_best_hyperparameters(num_trials=1)[0]
     print(f'{logger()} CNN Hyperparameter Tuning completed\n\n')
-    log("{best_hps.values}")
+    log(f"{best_hps.values}")
 
     cnn_model = cnn_tuner.hypermodel.build(best_hps)
     cnn_history = cnn_model.fit(X_train_padded, y_train, batch_size=64, epochs=max_epoch, validation_data=(X_valid_padded, y_valid))
@@ -434,7 +434,7 @@ else:
     print(f'{logger()} Best epoch: %d' % (best_epoch,))
 
     cnn_model.save(model_path)  # Save the model to a HDF5 file
-    log("CNN Model saved successfully.")
+    log(f"CNN Model saved successfully.")
 
     helper.plot_history(cnn_history,model_name, best_hps.values)
     helper.save_summary(cnn_model, cnn_history, best_hps, model_name)
@@ -444,7 +444,7 @@ else:
 
     cnn_model.fit(X_train_padded, y_train, batch_size=64, epochs=1, validation_data=(X_valid_padded, y_valid), callbacks=[metrics_callback])
 
-log("CNN architecture: ") if verbose else None
+log(f"CNN architecture: ") if verbose else None
 print(cnn_model.summary()) if verbose else None
 
 model_name= f"{project_name}_LSTM"
@@ -454,9 +454,9 @@ if model_exist_lstm:
     # Try to load the saved model
     lstm_model = load_model(model_path)
     lstm_model.compile(optimizer='adam', loss=loss_func)
-    log("\n");log("LSTM Model loaded successfully.")
+    log(f"\n");log(f"LSTM Model loaded successfully.")
 else:
-    log("\n");log("LSTM Model file not found. Creating a new model...")
+    log(f"\n");log(f"LSTM Model file not found. Creating a new model...")
     lstm_hyper_model = model_builders.LSTMHyperModel(encoder=encoder,loss_func=loss_func, final_dim=final_dim, final_activation=final_activation)
     metrics_callback = model_builders.MetricsCallback(test_data=X_valid_padded, y_true=y_valid, name=project_name)
 
@@ -472,7 +472,7 @@ else:
     lstm_tuner.search(X_train_padded, y_train, batch_size=64, epochs=max_epoch_tuner, validation_data=(X_valid_padded, y_valid), callbacks=[stop_early])
     best_hps=lstm_tuner.get_best_hyperparameters(num_trials=1)[0]
     print(f'{logger()} LSTM Hyperparameter Tuning completed\n\n')
-    log("{best_hps.values}")
+    log(f"{best_hps.values}")
 
     lstm_model = lstm_tuner.hypermodel.build(best_hps)
     lstm_history = lstm_model.fit(X_train_padded, y_train, batch_size=64, epochs=max_epoch, validation_data=(X_valid_padded, y_valid))
@@ -483,7 +483,7 @@ else:
     print(f'{logger()} LSTM Model completed\n\n')
 
     lstm_model.save(model_path)  # Save the model to a HDF5 file
-    log("Model saved successfully.")
+    log(f"Model saved successfully.")
 
     helper.plot_history(lstm_history,model_name, best_hps.values)
     helper.save_summary(lstm_model, lstm_history, best_hps, model_name)
@@ -493,7 +493,7 @@ else:
 
     lstm_model.fit(X_train_padded, y_train, batch_size=64, epochs=1, validation_data=(X_valid_padded, y_valid), callbacks=[metrics_callback])
 
-log("LSTM architecture: ") if verbose else None
+log(f"LSTM architecture: ") if verbose else None
 print(lstm_model.summary()) if verbose else None
 
 print(config["max_len"]) if verbose else None
@@ -509,9 +509,9 @@ if model_exist_en:
     # Try to load the saved model
     ensemble = load_model(model_path)
     ensemble.compile(optimizer='adam', loss=loss_func, metrics=["accuracy"])
-    log("\n");log("ENSEMBLE Model loaded successfully.")
+    log(f"\n");log(f"ENSEMBLE Model loaded successfully.")
 else:
-    log("\n");log("ENSEMBLE Model not found, creating new.")
+    log(f"\n");log(f"ENSEMBLE Model not found, creating new.")
     all_models = [cnn_model, lstm_model]
 
     # model_outputs = [model(model_input) for model in models]
@@ -551,7 +551,7 @@ else:
     #helper.save_summary(ensemble, history, "ensemble", model_name)
 
     ensemble.save(model_path)
-    log("Saving Ensemble")
+    log(f"Saving Ensemble")
 
 
     with open(summary_path, 'a') as f:
@@ -564,13 +564,13 @@ else:
         validation_data=(X_valid_padded_reshaped, y_valid), 
         callbacks=[metrics_callback])
 
-log("Ensemble architecture: ") if verbose else None
+log(f"Ensemble architecture: ") if verbose else None
 print(ensemble.summary()) if verbose else None
 
 # predictions validation
 
 if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, config_exist]):
-    log("\n");log("Starting validation prediction: ") 
+    log(f"\n");log(f"Starting validation prediction: ") 
  
     predictions = ensemble.predict(X_valid_padded_reshaped)
     predictions_df = pd.DataFrame(predictions)
@@ -600,17 +600,17 @@ if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, conf
 
     output_path = f"predictions/{model_name}.validation.csv"
     merged_df.to_csv(output_path, index=False)
-    log("Predictions (validation data) saved to {output_path}")
+    log(f"Predictions (validation data) saved to {output_path}")
     print(merged_df) if verbose else None
 
     output_path = f"predictions/{model_name}.validation.fasta"
     write_to_fasta(merged_df, output_path)
-    log("Predictions (fasta data) saved to {output_path}")
+    log(f"Predictions (fasta data) saved to {output_path}")
 
 
 # predictions query data
 
-log("\n");log("Starting query prediction: ") 
+log(f"\n");log(f"Starting query prediction: ") 
 sample_size = X_query_padded.shape[0] # number of samples in testing set
 input_dimension = 1               # each feature is represented by 1 number
 
@@ -640,10 +640,10 @@ merged_df = reorder_columns(merged_df)
 
 output_path = f"predictions/{query_name}.{model_name}.query.csv"
 merged_df.to_csv(output_path, index=False)
-log("Predictions (validation data) saved to {output_path}")
+log(f"Predictions (validation data) saved to {output_path}")
 
 print(merged_df.columns) if verbose else None
 
 output_path = f"predictions/{query_name}.{model_name}.query.fasta"
 write_to_fasta(merged_df, output_path)
-log("Predictions (fasta data) saved to {output_path}")
+log(f"Predictions (fasta data) saved to {output_path}")
