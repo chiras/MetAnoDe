@@ -185,7 +185,7 @@ def log(msg: str):
 
 # load in reference data
 if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, config_exist]):
-    log("\nNot all required models and configs are available, regenerating necessary ones")
+    log("\n");log("Not all required models and configs are available, regenerating necessary ones")
     log("This might take a while, depending on whether models are missing or need to be tuned...")
 
     # TODO check for ref db file
@@ -200,7 +200,7 @@ if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, conf
     if not balance_4C:
         max_rows = int(max_rows/3)
 
-    log("\nReceived {len(sequences_dict_true)} original sequences (Class 0)")
+    log("\n");log("Received {len(sequences_dict_true)} original sequences (Class 0)")
 
     sequences_dict_f1_balanced = helper.create_artificial_errorate(sequences_dict_true, max_rows, "subst")
     log("Created {len(sequences_dict_f1_balanced)} artifical high substitution rate sequences (Class 1)")
@@ -405,9 +405,9 @@ if model_exist_cnn:
     # Try to load the saved model
     cnn_model = load_model(model_path)
     cnn_model.compile(optimizer=opt, loss=loss_func)
-    log("\nCNN Model loaded successfully.")
+    log("\n");log("CNN Model loaded successfully.")
 else:
-    log("\nCNN Model file not found. Creating a new model...")
+    log("\n");log("CNN Model file not found. Creating a new model...")
     cnn_hyper_model = model_builders.CNNHyperModel(n_timesteps=X_padded_reshaped.shape[1],loss_func=loss_func, final_dim=final_dim, final_activation=final_activation,n_features  = X_padded_reshaped.shape[2])
     metrics_callback = model_builders.MetricsCallback(test_data=X_valid_padded, y_true=y_valid, name=project_name)
 
@@ -454,9 +454,9 @@ if model_exist_lstm:
     # Try to load the saved model
     lstm_model = load_model(model_path)
     lstm_model.compile(optimizer='adam', loss=loss_func)
-    log("\nLSTM Model loaded successfully.")
+    log("\n");log("LSTM Model loaded successfully.")
 else:
-    log("\nLSTM Model file not found. Creating a new model...")
+    log("\n");log("LSTM Model file not found. Creating a new model...")
     lstm_hyper_model = model_builders.LSTMHyperModel(encoder=encoder,loss_func=loss_func, final_dim=final_dim, final_activation=final_activation)
     metrics_callback = model_builders.MetricsCallback(test_data=X_valid_padded, y_true=y_valid, name=project_name)
 
@@ -509,9 +509,9 @@ if model_exist_en:
     # Try to load the saved model
     ensemble = load_model(model_path)
     ensemble.compile(optimizer='adam', loss=loss_func, metrics=["accuracy"])
-    log("\nENSEMBLE Model loaded successfully.")
+    log("\n");log("ENSEMBLE Model loaded successfully.")
 else:
-    log("\nENSEMBLE Model not found, creating new.")
+    log("\n");log("ENSEMBLE Model not found, creating new.")
     all_models = [cnn_model, lstm_model]
 
     # model_outputs = [model(model_input) for model in models]
@@ -570,7 +570,7 @@ print(ensemble.summary()) if verbose else None
 # predictions validation
 
 if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, config_exist]):
-    log("\nStarting validation prediction: ") 
+    log("\n");log("Starting validation prediction: ") 
  
     predictions = ensemble.predict(X_valid_padded_reshaped)
     predictions_df = pd.DataFrame(predictions)
@@ -610,7 +610,7 @@ if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, conf
 
 # predictions query data
 
-log("\nStarting query prediction: ") 
+log("\n");log("Starting query prediction: ") 
 sample_size = X_query_padded.shape[0] # number of samples in testing set
 input_dimension = 1               # each feature is represented by 1 number
 
