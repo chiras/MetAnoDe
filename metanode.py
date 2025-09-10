@@ -8,7 +8,7 @@ parser = argparse.ArgumentParser(description="Amplicon Anomaly Detection")
 parser.add_argument('-db', dest='true_file', required=False, help="True Amplicon database FASTA file")
 parser.add_argument('-query', dest='query_file', required=True, help="Amplicon database FASTA file")
 parser.add_argument('-p', dest='project_name', required=True, help="Model name")
-parser.add_argument('-4c', dest='four_classes', action='store_true', required=False, help="Switch from multiclass to binary (DEPRECEATED)")
+parser.add_argument('-2c', dest='two_classes', action='store_true', required=False, help="Switch from multiclass to binary (DEPRECEATED)")
 parser.add_argument('-r', dest='recalibrate', action='store_true', required=False, help="Switch to tuner recalibration")
 parser.add_argument('-v', dest='verbose', action='store_true', required=False, help="Switch to verbose mode")
 parser.add_argument('-t', dest='threads', required=False, help="Number of threads")
@@ -98,7 +98,7 @@ if args.threads is not None:
     tf.config.threading.set_intra_op_parallelism_threads(threads)
     tf.config.threading.set_inter_op_parallelism_threads(threads)
 
-if args.four_classes:
+if not args.two_classes:
     balance_4C = True
     loss_func='sparse_categorical_crossentropy'
 else:
