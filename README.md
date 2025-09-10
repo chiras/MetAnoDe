@@ -9,6 +9,10 @@ Pre-trained models are available for:
 ## Dependencies
 
 ### Option 1: Use a docker container (recommened)
+Make sure to install AND configure (below) the NVIDIA docker container toolkit
+https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html
+
+Then use the ```Dockerfile``` in the ```docker``` subfolder to create an image.
 
 ```sh
 # build / rebuild (for including github updates) docker image
