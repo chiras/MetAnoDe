@@ -24,11 +24,16 @@ else:
     os.environ['KERAS_BACKEND'] = 'tensorflow'
 
 import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras.preprocessing import text
-from tensorflow.keras.models import load_model
-from tensorflow.keras import layers
+from tensorflow.python.client import device_lib
+
+import keras
+#from tensorflow import keras
+from keras import layers, models, optimizers
+from tensorflow.keras.preprocessing.text import Tokenizer
+from keras.models import load_model
+#from tensorflow.keras import layers
 import keras_tuner as kt
+
 import pickle
 
 from modules import helper
@@ -85,10 +90,7 @@ def reorder_columns(df: pd.DataFrame) -> pd.DataFrame:
     return df[new_column_order]
 
 query_base_name = os.path.basename(args.query_file)
-query_name = os.path.splitext(query_base_name)[0]
-
-threads=int(args.threads)    
-    
+query_name = os.path.splitext(query_base_name)[0]  
 
 if args.threads is not None:
     threads = int(args.threads)
@@ -295,9 +297,9 @@ if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, conf
 
     if not token_exist:
         if kmer:
-            encoder = text.Tokenizer(char_level=False) 
+            encoder = Tokenizer(char_level=False) 
         else:
-            encoder = text.Tokenizer(char_level=True)
+            encoder = Tokenizer(char_level=True)
 
         encoder.fit_on_texts(X_train_list)
         with open(token_path, 'wb') as token:
@@ -401,7 +403,7 @@ else:
                         directory='tuner',
                         project_name=model_name)
 
-    stop_early = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5)
+    stop_early = keras.callbacks.EarlyStopping(monitor='val_loss', patience=5)
         
     cnn_tuner.search(X_train_padded, y_train, epochs=max_epoch_tuner, batch_size=64, validation_data=(X_valid_padded, y_valid), callbacks=[stop_early])
     best_hps=cnn_tuner.get_best_hyperparameters(num_trials=1)[0]
@@ -450,7 +452,7 @@ else:
                         directory='tuner',
                         project_name=model_name)
 
-    stop_early = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5)
+    stop_early = keras.callbacks.EarlyStopping(monitor='val_loss', patience=5)
 
     lstm_tuner.search(X_train_padded, y_train, batch_size=64, epochs=max_epoch_tuner, validation_data=(X_valid_padded, y_valid), callbacks=[stop_early])
     best_hps=lstm_tuner.get_best_hyperparameters(num_trials=1)[0]
@@ -504,12 +506,12 @@ else:
     print(X_train_padded.shape) if verbose else None
 
     models = [cnn_model, lstm_model]
-    model_input = tf.keras.Input(shape=(X_padded_reshaped.shape[1],X_padded_reshaped.shape[2]), name="ensemble_input")
+    model_input = keras.Input(shape=(X_padded_reshaped.shape[1],X_padded_reshaped.shape[2]), name="ensemble_input")
     #X_train_padded, y_train #X_padded_reshaped
 
 
     ensemble = model_builders.create_ensemble(models, model_input, final_dim, final_activation)
-    ensemble.compile(loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False),
+    ensemble.compile(loss=keras.losses.SparseCategoricalCrossentropy(from_logits=False),
                     optimizer="adam", 
                     metrics=["accuracy"])
 

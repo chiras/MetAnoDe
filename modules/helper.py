@@ -4,7 +4,10 @@ import pandas as pd
 from textwrap import wrap
 import random
 import re
+import os
 
+os.makedirs("plots", exist_ok=True)
+os.makedirs("predictions", exist_ok=True)
 
 def sample_dataframe(df, n):
     return df.sample(n=n, random_state=42).reset_index(drop=True)

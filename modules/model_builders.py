@@ -4,11 +4,13 @@
 # - less values in hp choices: removed 128 and choices from droput
 # - add binary_crossentropy switch 4D: sparse
 
+import keras
 import keras_tuner as kt
-import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras.callbacks import Callback 
+#import tensorflow as tf
+#from tensorflow import keras
+from keras.callbacks import Callback
 from sklearn.metrics import classification_report
+import numpy as np
 
 class MetricsCallback(Callback):
     def __init__(self, test_data, y_true, name):
@@ -18,7 +20,7 @@ class MetricsCallback(Callback):
 
     def on_epoch_end(self, epoch, logs=None):
         y_pred = self.model.predict(self.test_data)
-        y_pred = tf.argmax(y_pred,axis=1)
+        y_pred = np.argmax(y_pred, axis=1)
         report_dictionary = classification_report(self.y_true, y_pred, output_dict = True)
         print(classification_report(self.y_true,y_pred,output_dict=False)) 
 
