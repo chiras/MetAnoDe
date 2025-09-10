@@ -1,6 +1,10 @@
 import os
 import argparse
 import time
+import random
+import pickle
+import numpy as np 
+import pandas as pd 
 
 start_time = time.time()
 
@@ -13,6 +17,7 @@ parser.add_argument('-r', dest='recalibrate', action='store_true', required=Fals
 parser.add_argument('-v', dest='verbose', action='store_true', required=False, help="Switch to verbose mode")
 parser.add_argument('-t', dest='threads', required=False, help="Number of threads")
 parser.add_argument('-ot', dest='offtargets', required=False, help="Number of threads")
+parser.add_argument('-seed', dest='seed', required=False, help="Seed for randomization")
 
 args = parser.parse_args()
 
@@ -22,6 +27,13 @@ if verbose:
 else: 
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
     os.environ['KERAS_BACKEND'] = 'tensorflow'
+
+if not args.seed:
+    SEED = int(os.environ.get("SEED", str(int(time.time()) % (2**32 - 1))))
+else:
+    SEED = int(args.seed)
+
+os.environ["PYTHONHASHSEED"] = str(SEED)
 
 import tensorflow as tf
 from tensorflow.python.client import device_lib
@@ -34,16 +46,16 @@ from keras.models import load_model
 #from tensorflow.keras import layers
 import keras_tuner as kt
 
-import pickle
-
 from modules import helper
 from modules import model_builders
 
-import numpy as np 
-import pandas as pd 
-
 from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
+
+
+random.seed(SEED)
+np.random.seed(SEED)
+tf.random.set_seed(SEED)
 
 if verbose:
     print("## Devices available: ")
@@ -182,6 +194,8 @@ def log(msg: str):
     except Exception:
         # don't crash training because logging failed
         pass
+
+log(f"Random seed: {SEED}")
 
 # load in reference data
 if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, config_exist]):
