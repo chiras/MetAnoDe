@@ -27,7 +27,7 @@ WORKDIR /data
 # Wrapper: ensure dirs, then ALWAYS copy pretrained into /data
 # Default: no-overwrite (keeps any user-trained files); set PRETRAINED_OVERWRITE=1 to force overwrite.
 RUN printf '#!/usr/bin/env bash\nset -e\n\
-mkdir -p /data/models /data/predictions /data/plots /data/tuner\n\
+mkdir -p /data/models /data/logs /data/predictions /data/plots /data/tuner\n\
 copy_mode=${PRETRAINED_OVERWRITE:-0}\n\
 if [ -d /opt/MetAnoDe/models ]; then\n\
   if [ \"$copy_mode\" = \"1\" ]; then\n\
