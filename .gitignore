@@ -5,3 +5,11 @@ tuner
 
 data/.DS_Store
 models/.DS_Store
+model_improvement_todo.md
+data/ITS2_test_data25-09.zip
+data/data_best_models_Ubuntu/fungi.trim.1.fasta
+data/data_best_models_Ubuntu/ITS2.all.merge.derep.fa
+data/data_best_models_Ubuntu/not_used_ITS2.Quaresma2024.all.trimmedpy2.fasta
+data/data_best_models_Ubuntu/ITS2.Quaresma2024-Sickel2015.fasta
+data/data_best_models_Ubuntu/call_ubuntu.sh
+data/.DS_Store
