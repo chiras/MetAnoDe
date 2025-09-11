@@ -622,12 +622,20 @@ else:
     with open(summary_path, 'a') as f:
         f.write('\n\n-##### Ensemble #####:\n')
 
-    metrics_callback = model_builders.MetricsCallback(test_data=X_padded_reshaped, y_true=y_train, name=project_name)
+    metrics_callback = model_builders.MetricsCallback(
+        test_data=[X_valid_padded, X_valid_padded_reshaped],  # LSTM tokens, CNN 3D
+        y_true=y_valid,
+        name=project_name
+    )
 
-    ensemble.fit(X_padded_reshaped, y_train, batch_size=64, epochs=1, 
-        #validation_split=0.25,
-        validation_data=(X_valid_padded_reshaped, y_valid), 
-        callbacks=[metrics_callback])
+    ensemble.fit(
+        [X_train_padded, X_padded_reshaped],  # two inputs
+        y_train,
+        batch_size=64,
+        epochs=1,
+        validation_data=([X_valid_padded, X_valid_padded_reshaped], y_valid),
+        callbacks=[metrics_callback]
+    )
 
 log(f"Ensemble architecture: ") if verbose else None
 log(ensemble.summary()) if verbose else None
@@ -676,7 +684,7 @@ if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, conf
     # predictions_df_lstm = predictions_df_lstm.rename(columns={0: 'pred_lstm'})
     # predictions_df_lstm['pred_bin_lstm'] = (predictions_df_lstm['pred_lstm']).round().astype(int)
 
-    predictions_cnn = cnn_model.predict(X_valid_padded)
+    predictions_cnn = cnn_model.predict(X_valid_padded_reshaped)
     predictions_df_cnn = pd.DataFrame(predictions_cnn)
     predictions_df_cnn = process_dataframe(predictions_df_cnn, labels, "CNN")
 
@@ -723,7 +731,7 @@ predictions_lstm = lstm_model.predict(X_query_padded)
 predictions_df_lstm = pd.DataFrame(predictions_lstm)
 predictions_df_lstm = process_dataframe(predictions_df_lstm, labels, "LSTM")
 
-predictions_cnn = cnn_model.predict(X_query_padded)
+predictions_cnn = cnn_model.predict(X_query_padded_reshaped)
 predictions_df_cnn = pd.DataFrame(predictions_cnn)
 predictions_df_cnn = process_dataframe(predictions_df_cnn, labels, "CNN")
 
