@@ -27,6 +27,9 @@ project_name=args.project_name
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")   # TF C++ logs
 os.environ.setdefault("GLOG_minloglevel", "3")       # absl/glog route
 os.environ.setdefault("TF_CPP_MIN_VLOG_LEVEL", "0")
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"    # Suppress TF/CUDA INFO+WARNING
+os.environ["NVIDIA_TF32_OVERRIDE"] = "0"    # Avoid TF32 warnings
+
 # Keep your own logs on stdout only
 
 verbose = True if args.verbose else False
@@ -99,6 +102,20 @@ def log(msg: str):
 
 log(f"Random seed: {SEED}")
 
+import contextlib, io, sys
+from tensorflow.python.client import device_lib
+
+def safe_list_devices():
+    stderr = io.StringIO()
+    with contextlib.redirect_stderr(stderr):
+        devices = device_lib.list_local_devices()
+    return devices
+
+if verbose:
+    log("## Devices available: ")
+    for d in safe_list_devices():
+        log(str(d))
+        
 if verbose:
     log("## Devices available: ")
     log(device_lib.list_local_devices())
