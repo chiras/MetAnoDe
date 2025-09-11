@@ -21,6 +21,7 @@ parser.add_argument('-ot', dest='offtargets', required=False, help="Number of th
 parser.add_argument('-seed', dest='seed', required=False, help="Seed for randomization")
 
 args = parser.parse_args()
+project_name=args.project_name 
 
 verbose = True if args.verbose else False
 if verbose:
@@ -56,11 +57,37 @@ from modules import model_builders
 from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
 
+# logging on command line and to file
+timestamp = time.strftime("%Y%m%d.%H%M%S")
+log_dir = "logs"  # <- relative; outside Docker it lands in ./logs, inside Docker in /data/logs
+os.makedirs(log_dir, exist_ok=True)
+logfile_path = os.path.join(log_dir, f"{project_name}.{timestamp}.log")
+
+def log(msg: str):
+    """Prints and appends a timestamped line to the logfile."""
+    global project_name, start_time, logfile_path
+    elapsed = int(time.time() - start_time)
+    hhmmss = time.strftime("%H:%M:%S", time.gmtime(elapsed))
+    line = f"[AD-DNN: {project_name}: {hhmmss}] {msg}"
+
+    # console
+    print(line)
+
+    # file (best-effort)
+    try:
+        with open(logfile_path, "a") as f:
+            f.write(line + "\n")
+    except Exception:
+        # don't crash training because logging failed
+        pass
+
+log(f"Random seed: {SEED}")
+
 if verbose:
-    print("## Devices available: ")
-    print(device_lib.list_local_devices())
-    print("CUDA version:")
-    print(tf.sysconfig.get_build_info()['cuda_version'])
+    log("## Devices available: ")
+    log(device_lib.list_local_devices())
+    log("CUDA version:")
+    log(tf.sysconfig.get_build_info()['cuda_version'])
     
 def write_to_fasta(df: pd.DataFrame, filepath: str) -> None:
     with open(filepath, 'w') as file:
@@ -116,7 +143,6 @@ else:
     balance_4C = False
     loss_func='binary_crossentropy' 
 
-project_name=args.project_name 
 max_epoch=10
 max_epoch_ensemble=10
 max_epoch_tuner=5
@@ -170,32 +196,6 @@ def split_dataset(dataset, test_ratio=0.25):
 
 sequences_dict_query = helper.read_fasta(args.query_file, 99, 99)
 
-# logging on command line and to file
-timestamp = time.strftime("%Y%m%d.%H%M%S")
-log_dir = "logs"  # <- relative; outside Docker it lands in ./logs, inside Docker in /data/logs
-os.makedirs(log_dir, exist_ok=True)
-logfile_path = os.path.join(log_dir, f"{project_name}.{timestamp}.log")
-
-def log(msg: str):
-    """Prints and appends a timestamped line to the logfile."""
-    global project_name, start_time, logfile_path
-    elapsed = int(time.time() - start_time)
-    hhmmss = time.strftime("%H:%M:%S", time.gmtime(elapsed))
-    line = f"[AD-DNN: {project_name}: {hhmmss}] {msg}"
-
-    # console
-    print(line)
-
-    # file (best-effort)
-    try:
-        with open(logfile_path, "a") as f:
-            f.write(line + "\n")
-    except Exception:
-        # don't crash training because logging failed
-        pass
-
-log(f"Random seed: {SEED}")
-
 def get_git_info_short():
     """Return commit count + short/full hash if available."""
     try:
@@ -225,7 +225,7 @@ if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, conf
     config = {}
 
     sequences_dict_true = helper.read_fasta(args.true_file, 0, 0)
-    print(sequences_dict_true) if verbose else None
+    log(sequences_dict_true) if verbose else None
 
     tr_len=len(sequences_dict_true)
     max_rows = int(tr_len*2)
@@ -317,7 +317,7 @@ if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, conf
     #     X_valid_balanced = helper.sample_dataframe(X_valid_balanced, 2500)
     #     max_epoch=4
 
-    print(X_train_balanced) if verbose else None
+    log(X_train_balanced) if verbose else None
 
     # Separate Features from Labels
     X_train_final = X_train_balanced.drop(columns=['headers','Target','Target4D','sizes'])  # Features
@@ -341,7 +341,7 @@ if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, conf
         X_train_list = helper.split_into_kmers(X_train_list, 8, 1)
         X_valid_list = helper.split_into_kmers(X_valid_list, 8, 1)
 
-        print(X_train_list[1]) if verbose else None
+        log(X_train_list[1]) if verbose else None
 
     # remove temporary data
     del X_train_balanced
@@ -374,7 +374,7 @@ if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, conf
     word_index = encoder.word_index
     encoded_characters = pd.DataFrame(list(word_index.items()), columns=['Character', 'Encoding'])
     encoded_characters.loc[len(encoded_characters)] = ['<PAD>', 0]
-    print(encoded_characters) if verbose else None
+    log(encoded_characters) if verbose else None
 
     # Pad sequences
     log(f"Padding data")
@@ -409,7 +409,7 @@ if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, conf
     input_dimension = 1               # each feature is represented by 1 number
 
     X_padded_reshaped = X_train_padded.reshape(sample_size,time_steps,input_dimension)
-    print(X_padded_reshaped.shape) if verbose else None
+    log(X_padded_reshaped.shape) if verbose else None
 
     # remove temporary data
     del X_train_list
@@ -539,7 +539,7 @@ else:
 log(f"LSTM architecture: ") if verbose else None
 log(lstm_model.summary()) if verbose else None
 
-print(config["max_len"]) if verbose else None
+log(config["max_len"]) if verbose else None
 
 if shuffle_validation:
     y_valid = np.random.permutation(y_valid)
@@ -561,7 +561,7 @@ else:
     # ensemble_output = tf.keras.layers.Average(name="ensemble_average")(model_outputs)
     # ensemble_model = tf.keras.Model(inputs=model_input, outputs=ensemble_output,name="ensemble")
 
-    print(X_train_padded.shape) if verbose else None
+    log(X_train_padded.shape) if verbose else None
 
     # --- Build proper multi-input ensemble (LSTM: (T,), CNN: (T,1)) ---
     n_timesteps = X_train_padded.shape[1]  # T
@@ -694,7 +694,7 @@ if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, conf
     output_path = f"predictions/{model_name}.validation.csv"
     merged_df.to_csv(output_path, index=False)
     log(f"Predictions (validation data) saved to {output_path}")
-    print(merged_df) if verbose else None
+    log(merged_df) if verbose else None
 
     output_path = f"predictions/{model_name}.validation.fasta"
     write_to_fasta(merged_df, output_path)
@@ -707,13 +707,13 @@ log(f"\n");log(f"Starting query prediction: ")
 sample_size = X_query_padded.shape[0] # number of samples in testing set
 input_dimension = 1               # each feature is represented by 1 number
 
-print(X_query_padded.shape) if verbose else None
+log(X_query_padded.shape) if verbose else None
 # X_query_padded_reshaped = X_query_padded.reshape(sample_size,config["max_len"],input_dimension)
 X_query_padded_reshaped = X_query_padded.reshape(
     X_query_padded.shape[0], config["max_len"], 1
 )
 
-print(X_query_padded_reshaped.shape) if verbose else None
+log(X_query_padded_reshaped.shape) if verbose else None
 
 predictions = ensemble.predict([X_query_padded, X_query_padded_reshaped])
 predictions_df = pd.DataFrame(predictions)
@@ -739,7 +739,7 @@ output_path = f"predictions/{query_name}.{model_name}.query.csv"
 merged_df.to_csv(output_path, index=False)
 log(f"Predictions (validation data) saved to {output_path}")
 
-print(merged_df.columns) if verbose else None
+log(merged_df.columns) if verbose else None
 
 output_path = f"predictions/{query_name}.{model_name}.query.fasta"
 write_to_fasta(merged_df, output_path)
