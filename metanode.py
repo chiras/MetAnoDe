@@ -23,6 +23,12 @@ parser.add_argument('-seed', dest='seed', required=False, help="Seed for randomi
 args = parser.parse_args()
 project_name=args.project_name 
 
+# Silence TF/absl startup noise 
+os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")   # TF C++ logs
+os.environ.setdefault("GLOG_minloglevel", "3")       # absl/glog route
+os.environ.setdefault("TF_CPP_MIN_VLOG_LEVEL", "0")
+# Keep your own logs on stdout only
+
 verbose = True if args.verbose else False
 if verbose:
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  
@@ -40,6 +46,16 @@ random.seed(SEED)
 np.random.seed(SEED)
 
 import tensorflow as tf
+# Tame absl once TF is imported
+from absl import logging as absl_logging
+absl_logging.set_verbosity(absl_logging.ERROR)
+absl_logging.use_absl_handler()
+try:
+    # Avoid the "written to STDERR" preinit warning
+    absl_logging._warn_preinit_stderr = False  # pylint: disable=protected-access
+except Exception:
+    pass
+
 from tensorflow.python.client import device_lib
 tf.random.set_seed(SEED)
 
@@ -403,6 +419,20 @@ if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, conf
             # Deserialize and retrieve the variable from the file
             config = pickle.load(file)
 
+    # --- Save a small validation cache for future loaded-model runs ---
+    val_cache_path = f"models/{project_name}_val_cache.npz"
+    try:
+        # keep it compact (optionally subsample)
+        np.savez_compressed(
+            val_cache_path,
+            X_valid_padded=X_valid_padded.astype("int32"),     # tokens for LSTM
+            y_valid=y_valid.astype("int64")
+        )
+        log(f"Saved validation cache to {val_cache_path}")
+    except Exception as e:
+        log(f"Warning: could not save validation cache ({e})")
+
+
     #### for CNN: 
     sample_size = X_train_padded.shape[0] # number of samples in train set
     time_steps  = X_train_padded.shape[1] # number of features in train set
@@ -640,29 +670,49 @@ else:
 log(f"Ensemble architecture: ") if verbose else None
 log(ensemble.summary()) if verbose else None
 
-# ---- Sanity-check branch performance (multi-input ensemble) ----
-log("=== Sanity-check: branch and ensemble validation metrics ===")
+# Try to load cached validation set (works when models are loaded without retraining)
+val_cache_path = f"models/{project_name}_val_cache.npz"
+VAL = None
+if os.path.isfile(val_cache_path):
+    try:
+        _cache = np.load(val_cache_path, allow_pickle=False)
+        X_valid_lstm = _cache["X_valid_padded"].astype("int32")      # (N, T)
+        y_valid_cached = _cache["y_valid"]
+        X_valid_cnn  = np.expand_dims(X_valid_lstm, axis=-1).astype("float32")  # (N, T, 1)
+        VAL = (X_valid_lstm, X_valid_cnn, y_valid_cached)
+        log(f"Loaded validation cache from {val_cache_path}: {X_valid_lstm.shape}")
+    except Exception as e:
+        log(f"Warning: could not load validation cache ({e})")
 
-# Ensure we have the reshaped validation for CNN
-N_valid, T_valid = X_valid_padded.shape
-X_valid_padded_reshaped = X_valid_padded.reshape(N_valid, T_valid, 1)
+# ---- Sanity-check branch + ensemble metrics (only if we have VAL) ----
+if VAL is not None:
+    log("=== Sanity-check: branch and ensemble validation metrics ===")
+    X_valid_lstm, X_valid_cnn, y_valid_cached = VAL
 
-# 1) LSTM solo
-lstm_loss, lstm_acc = lstm_model.evaluate(X_valid_padded, y_valid, verbose=0)
-log(f"LSTM   -> val_loss={lstm_loss:.4f}, val_acc={lstm_acc:.4f}")
+    # 1) LSTM solo
+    try:
+        lstm_loss, lstm_acc = lstm_model.evaluate(X_valid_lstm, y_valid_cached, verbose=0)
+        log(f"LSTM    -> val_loss={lstm_loss:.4f}, val_acc={lstm_acc:.4f}")
+    except Exception as e:
+        log(f"LSTM evaluate failed: {e}")
 
-# 2) CNN solo
-cnn_loss, cnn_acc = cnn_model.evaluate(X_valid_padded_reshaped, y_valid, verbose=0)
-log(f"CNN    -> val_loss={cnn_loss:.4f}, val_acc={cnn_acc:.4f}")
+    # 2) CNN solo
+    try:
+        cnn_loss, cnn_acc = cnn_model.evaluate(X_valid_cnn, y_valid_cached, verbose=0)
+        log(f"CNN     -> val_loss={cnn_loss:.4f}, val_acc={cnn_acc:.4f}")
+    except Exception as e:
+        log(f"CNN evaluate failed: {e}")
 
-# 3) Ensemble (two inputs)
-ens_loss, ens_acc = ensemble.evaluate([X_valid_padded, X_valid_padded_reshaped], y_valid, verbose=0)
-log(f"Ensemble -> val_loss={ens_loss:.4f}, val_acc={ens_acc:.4f}")
-
-# Quick dominance probe: compare ensemble vs best single
-best_single_acc = max(lstm_acc, cnn_acc)
-gap = ens_acc - best_single_acc
-log(f"Ensemble gain over best single: {gap:+.4f} accuracy")
+    # 3) Ensemble (two inputs)
+    try:
+        ens_loss, ens_acc = ensemble.evaluate([X_valid_lstm, X_valid_cnn], y_valid_cached, verbose=0)
+        log(f"Ensemble-> val_loss={ens_loss:.4f}, val_acc={ens_acc:.4f}")
+        best_single_acc = max(locals().get("lstm_acc", 0.0), locals().get("cnn_acc", 0.0))
+        log(f"Ensemble gain over best single: {ens_acc - best_single_acc:+.4f}")
+    except Exception as e:
+        log(f"Ensemble evaluate failed: {e}")
+else:
+    log("No validation cache found; skipping sanity-check metrics.")
 
 # predictions validation
 
