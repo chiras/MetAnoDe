@@ -5,6 +5,7 @@ import random
 import pickle
 import numpy as np 
 import pandas as pd 
+import subprocess
 
 start_time = time.time()
 
@@ -194,6 +195,26 @@ def log(msg: str):
         pass
 
 log(f"Random seed: {SEED}")
+
+def get_git_info_short():
+    """Return commit count + short/full hash if available."""
+    try:
+        repo_root = os.path.dirname(os.path.abspath(__file__))
+        count = subprocess.check_output(
+            ["git", "rev-list", "--count", "HEAD"], cwd=repo_root, stderr=subprocess.DEVNULL
+        ).decode().strip()
+        short = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"], cwd=repo_root, stderr=subprocess.DEVNULL
+        ).decode().strip()
+        full = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=repo_root, stderr=subprocess.DEVNULL
+        ).decode().strip()
+        return count, short, full
+    except Exception:
+        return "unknown", "unknown", "unknown"
+    
+count, short, full = get_git_info_short()
+log(f"Git commit #{count}: {short} ({full})")
 
 # load in reference data
 if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, config_exist]):
