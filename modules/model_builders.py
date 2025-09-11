@@ -6,8 +6,7 @@
 
 import keras
 import keras_tuner as kt
-#import tensorflow as tf
-#from tensorflow import keras
+import tensorflow as tf  
 from keras.callbacks import Callback
 from sklearn.metrics import classification_report
 import numpy as np
@@ -123,24 +122,92 @@ class CNNHyperModel(kt.HyperModel):
         return model
     
 def create_ensemble(models, inputs, final_dim, final_activation):
-    for i in range(len(models)):
-        # Each model is a Net object
-        model = models[i]
-        for layer in model.layers[1:]:
+    """
+    Build an ensemble from a list of trained models (e.g., [cnn_model, lstm_model]).
+
+    Parameters
+    ----------
+    models : list[keras.Model]
+        Submodels already built (and typically trained). One expects 3D input (CNN),
+        another expects 2D int tokens (LSTM with Embedding).
+    inputs : keras.Input or list/tuple[keras.Input]
+        Recommended: [inp_lstm(int32, (T,)), inp_cnn(float32, (T,1))]
+        Legacy: a single Input (T,1); the function will adapt per-branch automatically.
+    final_dim : int
+        Number of output classes.
+    final_activation : str
+        'softmax' for multi-class, 'sigmoid' for binary.
+    """
+    # Freeze and namespace submodel layers (skip each model's own Input layer)
+    for i, sub in enumerate(models, start=1):
+        for layer in sub.layers[1:]:
             layer.trainable = False
-            layer.name = 'ensemble_' + str(i+1) + '_' + layer.name
+            layer._name = f"ensemble_{i}_{layer.name}"
 
-    stack_outputs = [model(inputs) for model in models]
-    x = keras.layers.Concatenate()(stack_outputs) 
-    x = keras.layers.Dropout(0.25)(x)
-    x = keras.layers.Dense(16)(x)
-    x = keras.layers.LeakyReLU(alpha=0.3)(x)
-    x = keras.layers.Dropout(0.25)(x)
-    x = keras.layers.Dense(final_dim, activation=final_activation)(x)
+    # Helper: expected input rank of a submodel (Sequential single-input case)
+    def _model_input_rank(m):
+        shp = m.input_shape
+        if isinstance(shp, (list, tuple)) and len(shp) and isinstance(shp[0], tuple):
+            shp = shp[0]
+        return len(shp)
 
-    print(inputs)
-    model = keras.models.Model(inputs=inputs, outputs=x, name='ensemble')
+    # Multi-input path: route by rank (2D -> LSTM branch, 3D -> CNN branch)
+    if isinstance(inputs, (list, tuple)):
+        model_inputs = list(inputs)
+        model_outputs = []
+        for m in models:
+            m_rank = _model_input_rank(m)
+            picked_inp = None
+            for inp in model_inputs:
+                if len(inp.shape) == m_rank:
+                    picked_inp = inp
+                    break
+            if picked_inp is None:
+                raise ValueError(
+                    f"Could not find a matching input rank for model expecting rank {m_rank}."
+                )
+            model_outputs.append(m(picked_inp))
+        ensemble_inputs = model_inputs
+    else:
+        # Legacy single-input path: adapt per branch.
+        base_inp = inputs  # expected (T,1) or convertible
 
+        # LSTM branch: squeeze feature dim -> (T,) and cast to int32
+        lstm_in = keras.layers.Lambda(
+            lambda t: tf.cast(tf.squeeze(t, axis=-1), tf.int32),
+            name="ensemble_lstm_adapter"
+        )(base_inp)
+
+        # CNN branch: ensure (T,1) and cast to float32
+        def _to_3d_float(t):
+            t = tf.convert_to_tensor(t)
+            if len(t.shape) == 2:
+                t = tf.expand_dims(t, axis=-1)
+            return tf.cast(t, tf.float32)
+
+        cnn_in = keras.layers.Lambda(_to_3d_float, name="ensemble_cnn_adapter")(base_inp)
+
+        model_outputs = []
+        for m in models:
+            m_rank = _model_input_rank(m)
+            if m_rank == 2:
+                model_outputs.append(m(lstm_in))
+            elif m_rank == 3:
+                model_outputs.append(m(cnn_in))
+            else:
+                raise ValueError(f"Unsupported submodel input rank: {m_rank}")
+
+        ensemble_inputs = inputs  # single Input remains the model signature
+
+    # Fuse heads
+    x = keras.layers.Concatenate(name="ensemble_concat")(model_outputs)
+    x = keras.layers.Dropout(0.25, name="ensemble_dropout_1")(x)
+    x = keras.layers.Dense(16, name="ensemble_hidden")(x)
+    x = keras.layers.LeakyReLU(alpha=0.3, name="ensemble_hidden_act")(x)
+    x = keras.layers.Dropout(0.25, name="ensemble_dropout_2")(x)
+    out = keras.layers.Dense(final_dim, activation=final_activation, name="ensemble_logits")(x)
+
+    model = keras.models.Model(inputs=ensemble_inputs, outputs=out, name="ensemble")
     return model
 
 def average_predictions(model1, model2, data1, data2):

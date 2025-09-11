@@ -532,36 +532,58 @@ else:
 
     print(X_train_padded.shape) if verbose else None
 
-    models = [cnn_model, lstm_model]
-    model_input = keras.Input(shape=(X_padded_reshaped.shape[1],X_padded_reshaped.shape[2]), name="ensemble_input")
-    #X_train_padded, y_train #X_padded_reshaped
+    # --- Build proper multi-input ensemble (LSTM: (T,), CNN: (T,1)) ---
+    n_timesteps = X_train_padded.shape[1]  # T
 
+    inp_lstm = keras.Input(shape=(n_timesteps,), dtype="int32",   name="ensemble_lstm_in")
+    inp_cnn  = keras.Input(shape=(n_timesteps, 1), dtype="float32", name="ensemble_cnn_in")
 
-    ensemble = model_builders.create_ensemble(models, model_input, final_dim, final_activation)
-    ensemble.compile(loss=keras.losses.SparseCategoricalCrossentropy(from_logits=False),
-                    optimizer="adam", 
-                    metrics=["accuracy"])
+    models_for_ensemble = [cnn_model, lstm_model]  # order doesn't matter (rank-based routing)
 
-    sample_size = X_valid_padded.shape[0] # number of samples in train set
-    time_steps  = X_valid_padded.shape[1] # number of features in train set
-    input_dimension = 1               # each feature is represented by 1 number
+    ensemble = model_builders.create_ensemble(
+        models=models_for_ensemble,
+        inputs=[inp_lstm, inp_cnn],
+        final_dim=final_dim,
+        final_activation=final_activation
+    )
 
-    X_valid_padded_reshaped = X_valid_padded.reshape(sample_size,time_steps,input_dimension)
-    print(X_valid_padded_reshaped.shape) if verbose else None
+    optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
+    callbacks = [
+        keras.callbacks.ModelCheckpoint(
+            filepath=f"models/{project_name}_Ensemble.best.keras",
+            monitor="val_accuracy", mode="max", save_best_only=True
+        ),
+        keras.callbacks.EarlyStopping(
+            monitor="val_accuracy", patience=5, restore_best_weights=True
+        ),
+        keras.callbacks.ReduceLROnPlateau(
+            monitor="val_loss", factor=0.5, patience=2, min_lr=1e-6
+        ),
+    ]
 
-    #ensemble.save_weights("ensemble_weights.keras")
-    history = ensemble.fit(X_padded_reshaped, y_train, 
-                            epochs=max_epoch_ensemble, 
-                            verbose=1,
-                            #validation_split=0.25)
-                            validation_data=(X_valid_padded_reshaped, y_valid))#, 
-                            #  callbacks=[ensemble_checkpoint]
-                            
+    ensemble.compile(
+        loss=keras.losses.SparseCategoricalCrossentropy(from_logits=False),
+        optimizer=optimizer,
+        metrics=["accuracy"]
+    )
 
+    # Ensure validation reshape exists
+    X_valid_padded_reshaped = X_valid_padded.reshape(
+        X_valid_padded.shape[0], X_valid_padded.shape[1], 1
+    )
 
-    helper.plot_history(history,model_name, "ensemble")
-    #helper.save_summary(ensemble, history, "ensemble", model_name)
+    # Train with TWO inputs: [tokens, cnn_features]
+    history = ensemble.fit(
+        x=[X_train_padded, X_padded_reshaped],
+        y=y_train,
+        epochs=max_epoch_ensemble,
+        batch_size=64,
+        verbose=1,
+        validation_data=([X_valid_padded, X_valid_padded_reshaped], y_valid),
+        callbacks=callbacks,
+    )
 
+    helper.plot_history(history, model_name, "ensemble")
     ensemble.save(model_path)
     log(f"Saving Ensemble")
 
@@ -584,7 +606,11 @@ print(ensemble.summary()) if verbose else None
 if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, config_exist]):
     log(f"\n");log(f"Starting validation prediction: ") 
  
-    predictions = ensemble.predict(X_valid_padded_reshaped)
+    predictions = ensemble.predict([
+        X_valid_padded,
+        X_valid_padded.reshape(X_valid_padded.shape[0], X_valid_padded.shape[1], 1)
+    ])
+
     predictions_df = pd.DataFrame(predictions)
     predictions_df = process_dataframe(predictions_df, labels, "EN")
 
@@ -627,10 +653,14 @@ sample_size = X_query_padded.shape[0] # number of samples in testing set
 input_dimension = 1               # each feature is represented by 1 number
 
 print(X_query_padded.shape) if verbose else None
-X_query_padded_reshaped = X_query_padded.reshape(sample_size,config["max_len"],input_dimension)
+# X_query_padded_reshaped = X_query_padded.reshape(sample_size,config["max_len"],input_dimension)
+X_query_padded_reshaped = X_query_padded.reshape(
+    X_query_padded.shape[0], config["max_len"], 1
+)
+
 print(X_query_padded_reshaped.shape) if verbose else None
 
-predictions = ensemble.predict(X_query_padded_reshaped)
+predictions = ensemble.predict([X_query_padded, X_query_padded_reshaped])
 predictions_df = pd.DataFrame(predictions)
 predictions_df = process_dataframe(predictions_df, labels, "EN")
 
