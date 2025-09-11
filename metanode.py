@@ -30,8 +30,6 @@ os.environ.setdefault("TF_CPP_MIN_VLOG_LEVEL", "0")
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"    # Suppress TF/CUDA INFO+WARNING
 os.environ["NVIDIA_TF32_OVERRIDE"] = "0"    # disable TF32 fast-math on Ampere/Ada
 os.environ["TF32_OVERRIDE"] = "0"     
-os.environ["TF_DETERMINISTIC_OPS"] = "1"
-os.environ["TF_CUDNN_DETERMINISTIC"] = "1"  # legacy flag; harmless if ignored
 
 # Keep your own logs on stdout only
 
