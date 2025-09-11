@@ -299,8 +299,18 @@ if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, conf
     X_train_balanced = shuffle(X_train_balanced, random_state=42).reset_index(drop=True)
     log(f"Shuffled data")
 
-    X_train_balanced, X_valid_balanced = split_dataset(X_train_balanced)
-    log(f"Split data to train and validation")
+    # Stratified split (keeps class proportions the same in train/val)
+    y_for_split = X_train_balanced['Target4D'] if balance_4C else X_train_balanced['Target']
+
+    X_train_balanced, X_valid_balanced = train_test_split(
+        X_train_balanced,
+        test_size=0.25,
+        stratify=y_for_split,
+        random_state=SEED,
+        shuffle=True,
+    )
+
+    log("Split data to train and validation (stratified)")
 
     # if verbose:
     #     X_train_balanced = helper.sample_dataframe(X_train_balanced, 7500)
