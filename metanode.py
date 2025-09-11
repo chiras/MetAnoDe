@@ -115,12 +115,9 @@ if verbose:
     log("## Devices available: ")
     for d in safe_list_devices():
         log(str(d))
-        
-if verbose:
-    log("## Devices available: ")
-    log(device_lib.list_local_devices())
     log("CUDA version:")
-    log(tf.sysconfig.get_build_info()['cuda_version'])
+    log(tf.sysconfig.get_build_info().get('cuda_version', 'unknown'))
+
     
 def write_to_fasta(df: pd.DataFrame, filepath: str) -> None:
     with open(filepath, 'w') as file:
@@ -229,25 +226,54 @@ def split_dataset(dataset, test_ratio=0.25):
 
 sequences_dict_query = helper.read_fasta(args.query_file, 99, 99)
 
-def get_git_info_short():
-    """Return commit count + short/full hash if available."""
-    try:
-        repo_root = os.path.dirname(os.path.abspath(__file__))
-        count = subprocess.check_output(
-            ["git", "rev-list", "--count", "HEAD"], cwd=repo_root, stderr=subprocess.DEVNULL
-        ).decode().strip()
-        short = subprocess.check_output(
-            ["git", "rev-parse", "--short", "HEAD"], cwd=repo_root, stderr=subprocess.DEVNULL
-        ).decode().strip()
-        full = subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], cwd=repo_root, stderr=subprocess.DEVNULL
-        ).decode().strip()
-        return count, short, full
-    except Exception:
-        return "unknown", "unknown", "unknown"
-    
-count, short, full = get_git_info_short()
-log(f"Git commit #{count}: {short} ({full})")
+def _run_git(args, cwd):
+    return subprocess.check_output(["git"] + args, cwd=cwd, stderr=subprocess.DEVNULL).decode().strip()
+
+def _looks_like_git_repo(path):
+    return os.path.isdir(os.path.join(path, ".git"))
+
+def get_git_info_simple():
+    """
+    Probe git metadata from either the current directory or /opt/MetAnoDe.
+    Falls back to VERSION-ish files or env vars if not a git repo.
+    Returns: (count, short, full, source_path_or_reason)
+    """
+    candidates = [
+        os.getcwd(),
+        "/opt/MetAnoDe"
+    ]
+
+    for root in candidates:
+        try:
+            if _looks_like_git_repo(root):
+                count = _run_git(["rev-list", "--count", "HEAD"], cwd=root)
+                short = _run_git(["rev-parse", "--short", "HEAD"], cwd=root)
+                full  = _run_git(["rev-parse", "HEAD"], cwd=root)
+                return count, short, full, root
+        except Exception:
+            pass
+
+    # Fallbacks (non-git image or copied tree)
+    for root in candidates:
+        for fname in ("VERSION", "version.txt", "build.txt", ".build"):
+            p = os.path.join(root, fname)
+            if os.path.isfile(p):
+                try:
+                    v = open(p).read().strip()
+                    return "n/a", v[:7] or "unknown", v or "unknown", f"{root}/{fname}"
+                except Exception:
+                    pass
+
+    # Env var fallback (can be set at build/run time)
+    env_commit = os.environ.get("GIT_COMMIT") or os.environ.get("METANODE_BUILD")
+    if env_commit:
+        return "n/a", env_commit[:7], env_commit, "env"
+
+    return "unknown", "unknown", "unknown", "no git / no version file / no env"
+
+# --- use it ---
+count, short, full, src = get_git_info_simple()
+log(f"Git: {short} (#{count}) {full} [{src}]")
 
 # load in reference data
 if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, config_exist]):
