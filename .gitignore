@@ -2,7 +2,6 @@
 .DS_Store
 tuner
 ._*
-
 data/.DS_Store
 models/.DS_Store
 model_improvement_todo.md
