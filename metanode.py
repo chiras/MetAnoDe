@@ -478,7 +478,7 @@ else:
     cnn_model.fit(X_train_padded, y_train, batch_size=64, epochs=1, validation_data=(X_valid_padded, y_valid), callbacks=[metrics_callback])
 
 log(f"CNN architecture: ") if verbose else None
-print(cnn_model.summary()) if verbose else None
+log(cnn_model.summary()) if verbose else None
 
 model_name= f"{project_name}_LSTM"
 model_path = f"models/{model_name}.keras"
@@ -527,7 +527,7 @@ else:
     lstm_model.fit(X_train_padded, y_train, batch_size=64, epochs=1, validation_data=(X_valid_padded, y_valid), callbacks=[metrics_callback])
 
 log(f"LSTM architecture: ") if verbose else None
-print(lstm_model.summary()) if verbose else None
+log(lstm_model.summary()) if verbose else None
 
 print(config["max_len"]) if verbose else None
 
@@ -620,7 +620,31 @@ else:
         callbacks=[metrics_callback])
 
 log(f"Ensemble architecture: ") if verbose else None
-print(ensemble.summary()) if verbose else None
+log(ensemble.summary()) if verbose else None
+
+# ---- Sanity-check branch performance (multi-input ensemble) ----
+log("=== Sanity-check: branch and ensemble validation metrics ===")
+
+# Ensure we have the reshaped validation for CNN
+N_valid, T_valid = X_valid_padded.shape
+X_valid_padded_reshaped = X_valid_padded.reshape(N_valid, T_valid, 1)
+
+# 1) LSTM solo
+lstm_loss, lstm_acc = lstm_model.evaluate(X_valid_padded, y_valid, verbose=0)
+log(f"LSTM   -> val_loss={lstm_loss:.4f}, val_acc={lstm_acc:.4f}")
+
+# 2) CNN solo
+cnn_loss, cnn_acc = cnn_model.evaluate(X_valid_padded_reshaped, y_valid, verbose=0)
+log(f"CNN    -> val_loss={cnn_loss:.4f}, val_acc={cnn_acc:.4f}")
+
+# 3) Ensemble (two inputs)
+ens_loss, ens_acc = ensemble.evaluate([X_valid_padded, X_valid_padded_reshaped], y_valid, verbose=0)
+log(f"Ensemble -> val_loss={ens_loss:.4f}, val_acc={ens_acc:.4f}")
+
+# Quick dominance probe: compare ensemble vs best single
+best_single_acc = max(lstm_acc, cnn_acc)
+gap = ens_acc - best_single_acc
+log(f"Ensemble gain over best single: {gap:+.4f} accuracy")
 
 # predictions validation
 
