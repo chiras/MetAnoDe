@@ -698,7 +698,7 @@ else:
     ensemble.save(model_path)
     log(f"Saving Ensemble")
 
-x    # Write summary section
+    # Write summary section
     with open(summary_path, 'a') as f:
         f.write('\n\n-##### Ensemble #####:\n')
 
