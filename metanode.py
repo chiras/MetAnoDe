@@ -15,6 +15,7 @@ parser.add_argument('-query', dest='query_file', required=True, help="Amplicon d
 parser.add_argument('-p', dest='project_name', required=True, help="Model name")
 parser.add_argument('-2c', dest='two_classes', action='store_true', required=False, help="Switch from multiclass to binary (DEPRECEATED)")
 parser.add_argument('-r', dest='recalibrate', action='store_true', required=False, help="Switch to tuner recalibration")
+parser.add_argument('-e', dest='epochs', required=False, default=20, help="change epochs from 20 to other value")
 parser.add_argument('-v', dest='verbose', action='store_true', required=False, help="Switch to verbose mode")
 parser.add_argument('-t', dest='threads', required=False, help="Number of threads")
 parser.add_argument('-ot', dest='offtargets', required=False, help="Number of threads")
@@ -174,8 +175,8 @@ else:
     balance_4C = False
     loss_func='binary_crossentropy' 
 
-max_epoch=10
-max_epoch_ensemble=10
+max_epoch = args.epochs
+max_epoch_ensemble=max_epoch
 max_epoch_tuner=5
 learning_rate=0.001
 opt = keras.optimizers.Adam(learning_rate=learning_rate) # ensemble only
@@ -505,6 +506,8 @@ with open(config_path, 'rb') as file:
 final_dim = config["output_dim"]
 log(f"Modeling {final_dim} Classes")
 log(f"Class labels: {labels}")
+log(f"Epochs: {max_epochs}")
+
 
 # prepare query
 X_query_final = sequences_dict_query.drop(columns=['headers','Target','Target4D','sizes'])  # Features
@@ -688,11 +691,14 @@ else:
         callbacks=callbacks,
     )
 
+    # Plot training history
     helper.plot_history(history, model_name, "ensemble")
+    
+    # Write summary section
     ensemble.save(model_path)
     log(f"Saving Ensemble")
 
-
+x    # Write summary section
     with open(summary_path, 'a') as f:
         f.write('\n\n-##### Ensemble #####:\n')
 

@@ -88,10 +88,27 @@ python metanode.py -query <query.fasta> \
 	-ot <ot1.fasta>,<ot2.fasta>,<ot3.fasta>
 ```
 
-for example, the pretrained ITS2 dataset was generated using: 
+for example, the pretrained ```ITS2_2026``` and ```16S_2026``` models were generated using (make sure to be in the root dir of the repo): 
 ```sh
-docker run --gpus all  -v $PWD:/data  --rm metanode:tf-25.01 -db data/ITS2.Quaresma2024-Sickel2015.fasta -ot data/ITS2.fungi.trim.1.fasta -p ITS2_2026 -query data/ITS2.Quaresma2024-Sickel2015.fasta
+docker run --gpus all  \
+	-v $PWD:/data  \
+	--rm metanode:tf-25.01 \
+	-db data/ITS2.Quaresma2024.all.trimmedpy2.fasta \
+	-ot data/ITS2.fungi.trim.1.fasta \
+	-p ITS2_2026 \
+	-query data/ITS2.Quaresma2024-Sickel2015.fasta
+
+docker run --gpus all  \
+	-v $PWD:/data  \
+	--rm metanode:tf-25.01 \
+	-db data/16S.silva.trim.derep.fa \
+	-ot data/16S.mitochondria.trim.1.derep.fasta,data/16S.chloroplast.trim.1.derep.fasta \
+	-p 16S_2026 \
+	-query data/16S.silva.trim.derep.fa
+
+	
 ```
+Training of pretrained models were conducted on Intel i7 with 256 GB RAM and 24GB NVIDIA RTX 4090 for ```ITS2_2026``` and AMD Ryzen 7 with 32 GB RAM and NVIDIA RTX 4070 Ti SUPER for ```16S_2026```.  
 
 The script supports both GPU and CPU processing; however, it is important to note that CPU processing significantly extends the duration of model training. Therefore, for efficient training, GPU utilization is strongly recommended here. There is no strict limit on the number of reference sequences and their lengths or off-target classes that can be incorporated. However, the memory required for encoding and training could potentially be a constraint depending on the available hardware resources.
 
