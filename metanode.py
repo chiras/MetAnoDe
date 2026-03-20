@@ -89,7 +89,7 @@ def log(msg: str):
     global project_name, start_time, logfile_path
     elapsed = int(time.time() - start_time)
     hhmmss = time.strftime("%H:%M:%S", time.gmtime(elapsed))
-    line = f"[AD-DNN: {project_name}: {hhmmss}] {msg}"
+    line = f"[MetAnoDe: {project_name}: {hhmmss}] {msg}"
 
     # console
     print(line)
