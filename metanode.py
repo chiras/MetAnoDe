@@ -201,7 +201,7 @@ else:
     labels = {0: 'positive', 1: 'false'}
 
 #labels = {0: 'positive', 1: 'substitution', 2: 'indels', 3: 'chimera', 4: 'mito', 5 : 'chloro'} # TODO fix in config ###### ---> 16S 
-labels = {0: 'positive', 1: 'substitution', 2: 'indels', 3: 'chimera', 4: 'fungi'} # TODO fix in config ###### ---> ITS2 
+#labels = {0: 'positive', 1: 'substitution', 2: 'indels', 3: 'chimera', 4: 'fungi'} # TODO fix in config ###### ---> ITS2 
 
 
 # check existing models:
@@ -506,7 +506,7 @@ with open(config_path, 'rb') as file:
 final_dim = config["output_dim"]
 log(f"Modeling {final_dim} Classes")
 log(f"Class labels: {labels}")
-log(f"Epochs: {max_epochs}")
+log(f"Epochs: {max_epoch}")
 
 
 # prepare query
