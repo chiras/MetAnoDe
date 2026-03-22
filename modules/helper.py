@@ -5,9 +5,48 @@ from textwrap import wrap
 import random
 import re
 import os
+import json
 
 os.makedirs("plots", exist_ok=True)
 os.makedirs("predictions", exist_ok=True)
+def split_files_exist(project_name: str, split_dir: str = "splits") -> bool:
+    paths = get_split_paths(project_name, split_dir)
+    return all(os.path.isfile(p) for p in paths.values())
+    
+def get_split_paths(project_name: str, split_dir: str = "splits") -> dict:
+    os.makedirs(split_dir, exist_ok=True)
+    return {
+        "train_csv": os.path.join(split_dir, f"{project_name}_train.csv.gz"),
+        "valid_csv": os.path.join(split_dir, f"{project_name}_valid.csv.gz"),
+        "meta_json": os.path.join(split_dir, f"{project_name}_split_meta.json"),
+    }
+
+def split_files_exist(project_name: str, split_dir: str = "splits") -> bool:
+    paths = get_split_paths(project_name, split_dir)
+    return all(os.path.isfile(p) for p in paths.values())
+
+def save_split(train_df: pd.DataFrame, valid_df: pd.DataFrame, meta: dict,
+               project_name: str, split_dir: str = "splits") -> dict:
+    paths = get_split_paths(project_name, split_dir)
+
+    train_df.to_csv(paths["train_csv"], index=False, compression="gzip")
+    valid_df.to_csv(paths["valid_csv"], index=False, compression="gzip")
+
+    with open(paths["meta_json"], "w") as f:
+        json.dump(meta, f, indent=2)
+
+    return paths
+
+def load_split(project_name: str, split_dir: str = "splits"):
+    paths = get_split_paths(project_name, split_dir)
+
+    train_df = pd.read_csv(paths["train_csv"], compression="gzip")
+    valid_df = pd.read_csv(paths["valid_csv"], compression="gzip")
+
+    with open(paths["meta_json"], "r") as f:
+        meta = json.load(f)
+
+    return train_df, valid_df, meta
 
 def sample_dataframe(df, n):
     return df.sample(n=n, random_state=42).reset_index(drop=True)

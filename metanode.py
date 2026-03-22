@@ -361,7 +361,7 @@ if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, conf
 
     SPLIT_DIR = "splits"
     config = {}
-    if split_files_exist(project_name, SPLIT_DIR):
+    if helper.split_files_exist(project_name, SPLIT_DIR):
         X_train_balanced, X_valid_balanced, split_meta = helper.load_split(project_name, SPLIT_DIR)
         log(f"Loaded existing train/validation split for project '{project_name}' from {SPLIT_DIR}")
         log(f"Split metadata: {split_meta}")
