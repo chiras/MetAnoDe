@@ -533,13 +533,13 @@ if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, conf
     log(X_padded_reshaped.shape) if verbose else None
 
     # remove temporary data
-    del X_train_list
-    del X_valid_list
-    del X_train_encoded
-    del X_valid_encoded
+    #del X_train_list
+    # del X_valid_list
+    #del X_train_encoded
+    #del X_valid_encoded
     #del X_train_padded
     #del X_valid_padded
-    log(f"Removed temporary data from memory")
+    #log(f"Removed temporary data from memory")
 
 with open(token_path, 'rb') as token:
     encoder = pickle.load(token)    
