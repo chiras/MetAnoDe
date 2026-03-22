@@ -6,6 +6,13 @@ Pre-trained models are available for:
 * Bacterial 16S-V4 matching the target region of Kozich et al. (2014)
 * Plant ITS2 matching the target region of Sickel et al. (2015)
 
+## Runtime considerations
+The script supports both GPU (Cuda) and CPU data processing. For data processing with pre-trained models, or such previously self trained, a difference is hardly noticable in relation to general metabarcoding procedures. For training of new models, there are however notable runtime improvements achievable when utilizing GPUs. 
+
+**Recommendation:**
+* **Data processing only:** GPU (Cuda) or CPU viable
+* **Training of new marker models:** GPU (Cuda) support strongly recommended.
+
 ## Dependencies
 
 ### Option 1: Use a docker container (recommened)
@@ -30,8 +37,7 @@ docker run -v $PWD:/data  --user $(id -u):$(id -g) --rm metanode:tf-25.01 -query
 
 ### Option 2:  Use a conda environment (not recommended)
 
-All dependencies need to be installed for proper execution of the code. The script supports both GPU and CPU data processing, with notable runtime improvements achievable when utilizing GPUs. Training of pre-trained models was conducted on Ubuntu 24.04 with GPU support, but have also been tested on Ubuntu 22.04/24.04 with and without GPU support, and MacOSX 12.3 without GPU support.
-
+All dependencies need to be installed for proper execution of the code. 
 Here an example to install in a conda environment:
 
 ```sh
@@ -61,7 +67,7 @@ docker run --gpus all  -v $PWD:/data --user $(id -u):$(id -g) --rm metanode:tf-2
 # conda option
 python metanode.py -query <query.fasta> -p <model_name>
 ```
-```<model_name``` corresponds to a pretrained model available in the subfolder ```models``` (e.g 16S.silva.trim.derep.fa_OT or ITS2.Quaresma2024-Sickel2015_OT).
+```<model_name``` corresponds to a pretrained model available in the subfolder ```models``` (e.g 16S_2026_3 or ITS2_2026_03).
 
 Adapter as well as primer sequences however need to be removed from data prior to analysis to match the model, as this varies between different amplicon library generation strategies. 
 
@@ -88,14 +94,14 @@ python metanode.py -query <query.fasta> \
 	-ot <ot1.fasta>,<ot2.fasta>,<ot3.fasta>
 ```
 
-for example, the pretrained ```ITS2_2026``` and ```16S_2026``` models were generated using (make sure to be in the root dir of the repo): 
+for example, the pretrained ```ITS2_2026_03``` and ```16S_2026_03``` models were generated using (make sure to be in the root dir of the repo): 
 ```sh
 docker run --gpus all  \
 	-v $PWD:/data  \
 	--rm metanode:tf-25.01 \
 	-db data/ITS2.Quaresma2024.all.trimmedpy2.fasta \
 	-ot data/ITS2.fungi.trim.1.fasta \
-	-p ITS2_2026 \
+	-p ITS2_2026_03 \
 	-query data/ITS2.Quaresma2024-Sickel2015.fasta
 
 docker run --gpus all  \
@@ -103,12 +109,12 @@ docker run --gpus all  \
 	--rm metanode:tf-25.01 \
 	-db data/16S.silva.trim.derep.fa \
 	-ot data/16S.mitochondria.trim.1.derep.fasta,data/16S.chloroplast.trim.1.derep.fasta \
-	-p 16S_2026 \
+	-p 16S_2026_03 \
 	-query data/16S.silva.trim.derep.fa
 
 	
 ```
-Training of pretrained models were conducted on Intel i7 with 256 GB RAM and 24GB NVIDIA RTX 4090 for ```ITS2_2026``` and AMD Ryzen 7 with 32 GB RAM and NVIDIA RTX 4070 Ti SUPER for ```16S_2026```.  
+Training of pre-trained models was conducted on Ubuntu 24.04 with GPU support, but have also been tested on Ubuntu 22.04/24.04 with and without GPU support, and MacOSX 12.3 without GPU support. Training of pretrained models were conducted on Intel i7 with 256 GB RAM and 24GB NVIDIA RTX 4090 for ```ITS2_2026``` and AMD Ryzen 7 with 32 GB RAM and 20GB NVIDIA RTX 4070 Ti SUPER for ```16S_2026```.  
 
 The script supports both GPU and CPU processing; however, it is important to note that CPU processing significantly extends the duration of model training. Therefore, for efficient training, GPU utilization is strongly recommended here. There is no strict limit on the number of reference sequences and their lengths or off-target classes that can be incorporated. However, the memory required for encoding and training could potentially be a constraint depending on the available hardware resources.
 

@@ -181,7 +181,7 @@ max_epoch_tuner=5
 learning_rate=0.001
 opt = keras.optimizers.Adam(learning_rate=learning_rate) # ensemble only
 
-
+SPLIT_DIR = "splits"
 shuffle_validation = False
 use_size_weights = True
 
@@ -277,24 +277,17 @@ def get_git_info_simple():
 count, short, full, src = get_git_info_simple()
 log(f"Git: {short} (#{count}) {full} [{src}]")
 
-# load in reference data
-if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, config_exist]):
-    log(f"\n");log(f"Not all required models and configs are available, regenerating necessary ones")
-    log(f"This might take a while, depending on whether models are missing or need to be tuned...")
-
-    # TODO check for ref db file
-    config = {}
-
+def generate_balanced_dataset(args, balance_4C, labels, verbose=False):
     sequences_dict_true = helper.read_fasta(args.true_file, 0, 0)
     log(sequences_dict_true) if verbose else None
 
-    tr_len=len(sequences_dict_true)
-    max_rows = int(tr_len*2)
+    tr_len = len(sequences_dict_true)
+    max_rows = int(tr_len * 2)
 
     if not balance_4C:
-        max_rows = int(max_rows/3)
+        max_rows = int(max_rows / 3)
 
-    log(f"\n");log(f"Received {len(sequences_dict_true)} original sequences (Class 0)")
+    log(f"\n"); log(f"Received {len(sequences_dict_true)} original sequences (Class 0)")
 
     sequences_dict_f1_balanced = helper.create_artificial_errorate(sequences_dict_true, max_rows, "subst")
     log(f"Created {len(sequences_dict_f1_balanced)} artifical high substitution rate sequences (Class 1)")
@@ -305,78 +298,123 @@ if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, conf
     sequences_dict_f3_balanced = helper.create_artificial_chimera(sequences_dict_true, max_rows)
     log(f"Created {len(sequences_dict_f3_balanced)} artifical chimeric sequences (Class 3)")
 
-    sequences_dict_true_lowsubst = helper.create_artificial_errorate(sequences_dict_true, int(tr_len/2), "lowsubst")
-    sequences_dict_true_lowindel = helper.create_artificial_errorate(sequences_dict_true, int(tr_len/2), "lowindel")
-    sequences_dict_true_balanced = pd.concat([sequences_dict_true, sequences_dict_true_lowsubst, sequences_dict_true_lowindel], ignore_index=True)
+    sequences_dict_true_lowsubst = helper.create_artificial_errorate(sequences_dict_true, int(tr_len / 2), "lowsubst")
+    sequences_dict_true_lowindel = helper.create_artificial_errorate(sequences_dict_true, int(tr_len / 2), "lowindel")
+    sequences_dict_true_balanced = pd.concat(
+        [sequences_dict_true, sequences_dict_true_lowsubst, sequences_dict_true_lowindel],
+        ignore_index=True
+    )
     log(f"Created {len(sequences_dict_true_lowsubst)} + {len(sequences_dict_true_lowindel)} artifical low error sequences (Class 0)")
 
     if args.offtargets is not None:
         split_list = args.offtargets.split(',')
-        i=4
+        i = 4
         sequences_dict_offtarget_all = pd.DataFrame()
+
         for offtarget in split_list:
             sequences_dict_offtarget = helper.read_fasta(offtarget, 0, i)
-            ot_len=len(sequences_dict_offtarget)
+            ot_len = len(sequences_dict_offtarget)
+
             if ot_len > max_rows:
                 sequences_dict_offtarget = helper.sample_dataframe(sequences_dict_offtarget, max_rows)
                 type_ot = "(downsampled)"
             else:
-                missing_rows = max_rows-ot_len
-                sequences_dict_ot_lowsubst = helper.create_artificial_errorate(sequences_dict_offtarget, int(missing_rows/2), "lowsubst")
-                sequences_dict_ot_lowindel = helper.create_artificial_errorate(sequences_dict_offtarget, int(missing_rows/2), "lowindel")
-                sequences_dict_offtarget = pd.concat([sequences_dict_offtarget, sequences_dict_ot_lowsubst, sequences_dict_ot_lowindel], ignore_index=True)
+                missing_rows = max_rows - ot_len
+                sequences_dict_ot_lowsubst = helper.create_artificial_errorate(sequences_dict_offtarget, int(missing_rows / 2), "lowsubst")
+                sequences_dict_ot_lowindel = helper.create_artificial_errorate(sequences_dict_offtarget, int(missing_rows / 2), "lowindel")
+                sequences_dict_offtarget = pd.concat(
+                    [sequences_dict_offtarget, sequences_dict_ot_lowsubst, sequences_dict_ot_lowindel],
+                    ignore_index=True
+                )
                 type_ot = "(upsampled)"
+
             len_ot = len(sequences_dict_offtarget)
-            sequences_dict_offtarget["Target4D"]= i 
-            sequences_dict_offtarget["Target"]= 1
+            sequences_dict_offtarget["Target4D"] = i
+            sequences_dict_offtarget["Target"] = 1
             labels[i] = f"OffTarget-{i}"
             log(f"Added {len_ot} {type_ot} Off-target Class {i} ({offtarget})")
-            i=i+1
+            i += 1
+
             sequences_dict_offtarget_all = pd.concat([sequences_dict_offtarget_all, sequences_dict_offtarget], ignore_index=True)
             del sequences_dict_offtarget
-
     else:
         sequences_dict_offtarget_all = helper.sample_dataframe(sequences_dict_true_balanced, 0)
 
-    X_train_balanced = pd.concat([sequences_dict_true_balanced, sequences_dict_f1_balanced, sequences_dict_f2_balanced, sequences_dict_f3_balanced,sequences_dict_offtarget_all], ignore_index=True)
-    config["max_len"] = max(len(seq) for seq in (X_train_balanced["sequences"]))
-    config["output_dim"] = final_dim = X_train_balanced["Target4D"].nunique()
-    config["labels"] = labels
-    log(f"Balanced to ({final_dim} class mode: {balance_4C}): {len(sequences_dict_true_balanced)}, {len(sequences_dict_f1_balanced)}, {len(sequences_dict_f2_balanced)}, {len(sequences_dict_f3_balanced)}, {len(sequences_dict_offtarget_all)}")
-    log(f"Class labels: {labels}")
-
-    # remove temporary data from memory
-    del sequences_dict_f1_balanced
-    del sequences_dict_f2_balanced
-    del sequences_dict_f3_balanced
-    del sequences_dict_true_lowsubst
-    del sequences_dict_true_lowindel
-    del sequences_dict_true_balanced
-    del sequences_dict_offtarget_all
-    log(f"Removed temporary data from memory")
-
-    # Shuffle the concatenated DataFrame
-    X_train_balanced = shuffle(X_train_balanced, random_state=42).reset_index(drop=True)
-    X_train_balanced = shuffle(X_train_balanced, random_state=42).reset_index(drop=True)
-    log(f"Shuffled data")
-
-    # Stratified split (keeps class proportions the same in train/val)
-    y_for_split = X_train_balanced['Target4D'] if balance_4C else X_train_balanced['Target']
-
-    X_train_balanced, X_valid_balanced = train_test_split(
-        X_train_balanced,
-        test_size=0.25,
-        stratify=y_for_split,
-        random_state=SEED,
-        shuffle=True,
+    X_train_balanced = pd.concat(
+        [
+            sequences_dict_true_balanced,
+            sequences_dict_f1_balanced,
+            sequences_dict_f2_balanced,
+            sequences_dict_f3_balanced,
+            sequences_dict_offtarget_all
+        ],
+        ignore_index=True
     )
 
-    log("Split data to train and validation (stratified)")
+    log(f"Balanced dataset created")
+    return X_train_balanced, labels
 
-    # if verbose:
-    #     X_train_balanced = helper.sample_dataframe(X_train_balanced, 7500)
-    #     X_valid_balanced = helper.sample_dataframe(X_valid_balanced, 2500)
-    #     max_epoch=4
+# load in reference data
+if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, config_exist]):
+    log(f"\n");log(f"Not all required models and configs are available, regenerating necessary ones")
+    log(f"This might take a while, depending on whether models are missing or need to be tuned...")
+
+    SPLIT_DIR = "splits"
+    config = {}
+    if split_files_exist(project_name, SPLIT_DIR):
+        X_train_balanced, X_valid_balanced, split_meta = helper.load_split(project_name, SPLIT_DIR)
+        log(f"Loaded existing train/validation split for project '{project_name}' from {SPLIT_DIR}")
+        log(f"Split metadata: {split_meta}")
+
+        labels = split_meta.get("labels", labels)
+        config["labels"] = labels
+        config["max_len"] = split_meta["max_len"]
+        config["output_dim"] = split_meta["output_dim"]
+    else:
+        X_all_balanced, labels = generate_balanced_dataset(args, balance_4C, labels, verbose=verbose)
+
+        config["max_len"] = max(len(seq) for seq in X_all_balanced["sequences"])
+        config["output_dim"] = X_all_balanced["Target4D"].nunique()
+        config["labels"] = labels
+
+        X_all_balanced = shuffle(X_all_balanced, random_state=SEED).reset_index(drop=True)
+        log(f"Shuffled data with seed {SEED}")
+
+        y_for_split = X_all_balanced["Target4D"] if balance_4C else X_all_balanced["Target"]
+
+        X_train_balanced, X_valid_balanced = train_test_split(
+            X_all_balanced,
+            test_size=0.25,
+            stratify=y_for_split,
+            random_state=SEED,
+            shuffle=True,
+        )
+
+        log("Split data to train and validation (stratified)")
+        all_split_df = pd.concat([X_train_balanced, X_valid_balanced], ignore_index=True)
+
+        split_meta = {
+            "project_name": project_name,
+            "seed": SEED,
+            "test_size": 0.25,
+            "balance_4C": balance_4C,
+            "loss_func": loss_func,
+            "query_file": args.query_file,
+            "true_file": args.true_file,
+            "offtargets": args.offtargets,
+            "n_train": int(len(X_train_balanced)),
+            "n_valid": int(len(X_valid_balanced)),
+            "labels": labels,
+            "max_len": int(max(len(seq) for seq in all_split_df["sequences"])),
+            "output_dim": int(all_split_df["Target4D"].nunique()),
+            "git_commit_short": short,
+            "git_commit_full": full,
+        }
+        del all_split_df
+
+        helper.save_split(X_train_balanced, X_valid_balanced, split_meta, project_name, SPLIT_DIR)
+        log(f"Saved new split for project '{project_name}'")
+        log(f"Split metadata: {split_meta}")
 
     log(X_train_balanced) if verbose else None
 
