@@ -468,12 +468,17 @@ if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, conf
     # Convert text data to sequences
     X_train_encoded = encoder.texts_to_sequences(X_train_list)
     X_valid_encoded = encoder.texts_to_sequences(X_valid_list)
+    del X_train_list
+    del X_valid_list
+    log("Removed raw sequence lists from memory")
 
     # Inspect the encoding. Add padding token to the encoding
     word_index = encoder.word_index
     encoded_characters = pd.DataFrame(list(word_index.items()), columns=['Character', 'Encoding'])
     encoded_characters.loc[len(encoded_characters)] = ['<PAD>', 0]
     log(encoded_characters) if verbose else None
+    del word_index
+    del encoded_characters
 
     # Pad sequences
     log(f"Padding data")
@@ -485,6 +490,9 @@ if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, conf
     log(f"Converting data")
     X_train_padded = np.array(X_train_encoded)
     X_valid_padded = np.array(X_valid_encoded)
+    del X_train_encoded
+    del X_valid_encoded
+    log("Removed intermediate encoded sequences from memory")
 
     y_train = np.array(y_train)
     y_valid = np.array(y_valid)
