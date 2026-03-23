@@ -42,7 +42,7 @@ class LSTMHyperModel(kt.HyperModel):
         hp_embeddim = hp.Choice('embeddim', values=[128]) #256 // 64, 128
         hp_units = hp.Choice('units',values=[32, 64]) # 4-64
         hp_dropout = hp.Choice('dropout', values=[0.25, 0.5]) #seq 1-5 0.1, 
-        hp_learning_rate = hp.Choice('learning_rate', values=[1e-3, 1e-4]) # 1e-2, 
+        hp_learning_rate = hp.Choice('learning_rate', values=[3e-4]) # 1e-3, 1e-4, 
 
         model = keras.Sequential()
         model.add(keras.layers.Embedding(len(self.encoder.index_word) + 1, hp_embeddim, mask_zero=True, name="LSTM_Embed"))
@@ -82,7 +82,7 @@ class CNNHyperModel(kt.HyperModel):
 
     def build(self, hp):   
         # parameters to be tuned
-        hp_learning_rate = hp.Choice('learning_rate', values=[1e-3, 1e-4]) #1e-2, 
+        hp_learning_rate = hp.Choice('learning_rate', values=[3e-4]) #1e-3, 1e-4, 
         hp_c1layerfilter = hp.Choice('filters', values=[32, 64]) #, 256 , 128
         hp_dropout = hp.Choice('dropout', values=[0.25, 0.5]) #, 256 0.1, 
 
@@ -203,7 +203,7 @@ def create_ensemble(models, inputs, final_dim, final_activation):
     x = keras.layers.Concatenate(name="ensemble_concat")(model_outputs)
     x = keras.layers.Dropout(0.25, name="ensemble_dropout_1")(x)
     x = keras.layers.Dense(16, name="ensemble_hidden")(x)
-    x = keras.layers.LeakyReLU(alpha=0.3, name="ensemble_hidden_act")(x)
+    x = keras.layers.LeakyReLU(negative_slope=0.3, name="ensemble_hidden_act")(x)
     x = keras.layers.Dropout(0.25, name="ensemble_dropout_2")(x)
     out = keras.layers.Dense(final_dim, activation=final_activation, name="ensemble_logits")(x)
 

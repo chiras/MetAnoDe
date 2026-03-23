@@ -178,7 +178,7 @@ else:
 max_epoch = args.epochs
 max_epoch_ensemble=max_epoch
 max_epoch_tuner=5
-learning_rate=0.001
+learning_rate=0.0003
 opt = keras.optimizers.Adam(learning_rate=learning_rate) # ensemble only
 
 SPLIT_DIR = "splits"
