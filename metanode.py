@@ -26,8 +26,8 @@ parser.add_argument(
     dest='target_len',
     required=False,
     type=int,
-    default=290,
-    help="Expected amplicon length (used for length filtering, default=330)"
+    default=None,
+    help="Expected amplicon length. If not set, estimated from data."
 )
 
 args = parser.parse_args()
@@ -298,12 +298,44 @@ def get_git_info_simple():
 count, short, full, src = get_git_info_simple()
 log(f"Git: {short} (#{count}) {full} [{src}]")
 
+def resolve_target_len(df, args_target_len, log_fn=None):
+    """
+    Resolve target length:
+    - use args if provided
+    - otherwise estimate from data using the median
+    """
+    lengths = df["sequences"].str.len()
+    empirical_median = int(lengths.median())
+    empirical_mean = float(lengths.mean())
+
+    if args_target_len is not None:
+        if log_fn:
+            log_fn(
+                f"Using user-defined target_len={args_target_len} | "
+                f"empirical_median={empirical_median}, empirical_mean={empirical_mean:.1f}, "
+                f"min={int(lengths.min())}, max={int(lengths.max())}"
+            )
+        return int(args_target_len)
+
+    if log_fn:
+        log_fn(
+            f"Estimated target_len from data using median: {empirical_median} | "
+            f"mean={empirical_mean:.1f}, min={int(lengths.min())}, max={int(lengths.max())}"
+        )
+
+    return empirical_median
+
 def length_stats_str(df, seq_col="sequences"):
     """
     Return formatted sequence length stats for a dataframe.
     """
     lengths = df[seq_col].str.len()
-    return f"min={int(lengths.min())}, max={int(lengths.max())}, mean={lengths.mean():.1f}"
+    return (
+        f"min={int(lengths.min())}, "
+        f"max={int(lengths.max())}, "
+        f"mean={lengths.mean():.1f}, "
+        f"median={float(lengths.median()):.1f}"
+    )
 
 def filter_by_length(df, target_len, lower_factor=0.5, upper_factor=1.5):
     lower = int(target_len * lower_factor)
@@ -329,11 +361,19 @@ def generate_balanced_dataset(args, balance_4C, labels, verbose=False):
     sequences_dict_true = helper.read_fasta(args.true_file, 0, 0)
     log(sequences_dict_true) if verbose else None
 
+    # --- resolve target length ---
+    target_len = resolve_target_len(
+        sequences_dict_true,
+        args.target_len,
+        log_fn=log
+    )
+
     # --- length filtering ---
     sequences_dict_true, length_filter_stats = filter_by_length(
         sequences_dict_true,
-        target_len=args.target_len,
-        lower_factor=0.75, upper_factor=1.25
+        target_len=target_len,
+        lower_factor=0.75,
+        upper_factor=1.25
     )
 
     log(
@@ -343,13 +383,17 @@ def generate_balanced_dataset(args, balance_4C, labels, verbose=False):
         f"range [{length_filter_stats['lower']}, {length_filter_stats['upper']}]"
     )
 
+    log(f"\n")
+    log(
+        f"Received {len(sequences_dict_true)} original sequences (Class 0) | "
+        f"{length_stats_str(sequences_dict_true)}"
+    )
+
     tr_len = len(sequences_dict_true)
     max_rows = int(tr_len * 2)
 
     if not balance_4C:
         max_rows = int(max_rows / 3)
-
-    log(f"\n"); log(f"Received {len(sequences_dict_true)} original sequences (Class 0) | {length_stats_str(sequences_dict_true)}")
 
     sequences_dict_f1_balanced = helper.create_artificial_errorate(sequences_dict_true, max_rows, "subst")
     log(f"Created {len(sequences_dict_f1_balanced)} artifical high substitution rate sequences (Class 1) | {length_stats_str(sequences_dict_f1_balanced)}")
@@ -360,7 +404,7 @@ def generate_balanced_dataset(args, balance_4C, labels, verbose=False):
     sequences_dict_f3_balanced = helper.create_artificial_chimera(
         sequences_dict_true,
         max_rows,
-        target_len=args.target_len,
+        target_len=target_len,
         log_fn=log
     )
     log(f"Created {len(sequences_dict_f3_balanced)} artifical chimeric sequences (Class 3) | {length_stats_str(sequences_dict_f3_balanced)}")
