@@ -687,7 +687,7 @@ else:
     log(f"Data shape: {X_train_padded.shape}") if verbose else None
     log(f"CNN input shape: {cnn_model.input_shape}")  if verbose else None
     log(f"LSTM input shape: {lstm_model.input_shape}")  if verbose else None
-    
+
     # --- Build proper multi-input ensemble (LSTM: (T,), CNN: (T,1)) ---
     n_timesteps = X_train_padded.shape[1]  # T
     log("E2") if verbose else None
@@ -721,28 +721,32 @@ else:
             monitor="val_loss", factor=0.5, patience=2, min_lr=1e-6
         ),
     ]
+    log("E7") if verbose else None
 
     ensemble.compile(
         loss=keras.losses.SparseCategoricalCrossentropy(from_logits=False),
         optimizer=optimizer,
         metrics=["accuracy"]
     )
+    log("E8") if verbose else None
 
     # Ensure validation reshape exists
     X_valid_padded_reshaped = X_valid_padded.reshape(
         X_valid_padded.shape[0], X_valid_padded.shape[1], 1
     )
+    log("E9") if verbose else None
 
     # Train with TWO inputs: [tokens, cnn_features]
     history = ensemble.fit(
         x=[X_train_padded, X_padded_reshaped],
         y=y_train,
         epochs=max_epoch_ensemble,
-        batch_size=64,
+        batch_size=16,
         verbose=1,
         validation_data=([X_valid_padded, X_valid_padded_reshaped], y_valid),
         callbacks=callbacks,
     )
+    log("E10") if verbose else None
 
     # Plot training history
     helper.plot_history(history, model_name, "ensemble")
@@ -760,6 +764,7 @@ else:
         y_true=y_valid,
         name=project_name
     )
+    log("E11") if verbose else None
 
     ensemble.fit(
         [X_train_padded, X_padded_reshaped],  # two inputs
