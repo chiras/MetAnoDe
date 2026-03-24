@@ -684,22 +684,29 @@ else:
     # ensemble_output = tf.keras.layers.Average(name="ensemble_average")(model_outputs)
     # ensemble_model = tf.keras.Model(inputs=model_input, outputs=ensemble_output,name="ensemble")
 
-    log(X_train_padded.shape) if verbose else None
-
+    log(f"Data shape: {X_train_padded.shape}") if verbose else None
+    log(f"CNN input shape: {cnn_model.input_shape}")  if verbose else None
+    log(f"LSTM input shape: {lstm_model.input_shape}")  if verbose else None
+    
     # --- Build proper multi-input ensemble (LSTM: (T,), CNN: (T,1)) ---
     n_timesteps = X_train_padded.shape[1]  # T
+    log("E2") if verbose else None
 
     inp_lstm = keras.Input(shape=(n_timesteps,), dtype="int32",   name="ensemble_lstm_in")
+    log("E3") if verbose else None
+
     inp_cnn  = keras.Input(shape=(n_timesteps, 1), dtype="float32", name="ensemble_cnn_in")
+    log("E4") if verbose else None
 
     models_for_ensemble = [cnn_model, lstm_model]  # order doesn't matter (rank-based routing)
-
+    log("E5") if verbose else None
     ensemble = model_builders.create_ensemble(
         models=models_for_ensemble,
         inputs=[inp_lstm, inp_cnn],
         final_dim=final_dim,
         final_activation=final_activation
     )
+    log("E6") if verbose else None
 
     optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
     callbacks = [
