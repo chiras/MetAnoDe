@@ -177,56 +177,123 @@ def save_summary(model, history, best_hps, model_name):
 import random
 import pandas as pd
 
-def create_artificial_chimera(df, num_sequences):
+def create_artificial_chimera(
+    df,
+    num_sequences,
+    min_frac=0.5,
+    max_frac=1.5,
+    target_len=None,
+    max_attempt_factor=50,
+    log_fn=None
+):
+    """
+    Create artificial chimeras with length filtering and diagnostics.
+    """
+
     headers = df['headers'].tolist()
     sequences = df['sequences'].tolist()
-    
+
+    if len(sequences) == 0:
+        raise ValueError("create_artificial_chimera received an empty dataframe.")
+
+    # --- ORIGINAL LENGTH STATS ---
+    lengths = [len(seq) for seq in sequences]
+    orig_min = min(lengths)
+    orig_max = max(lengths)
+
+    # --- TARGET LENGTH ---
+    if target_len is None:
+        lengths_sorted = sorted(lengths)
+        mid = len(lengths_sorted) // 2
+        if len(lengths_sorted) % 2 == 0:
+            target_len = int((lengths_sorted[mid - 1] + lengths_sorted[mid]) / 2)
+        else:
+            target_len = int(lengths_sorted[mid])
+
+    # --- FINAL FILTER RANGE ---
+    min_len = max(1, int(round(target_len * min_frac)))
+    max_len = max(min_len, int(round(target_len * max_frac)))
+
+    # --- LOG SETTINGS ---
+    if log_fn:
+        log_fn(
+            f"Chimera length settings | "
+            f"orig_min={orig_min}, orig_max={orig_max}, "
+            f"target={target_len}, final_min={min_len}, final_max={max_len}"
+        )
+
     chimera_headers = []
     chimera_sequences = []
     chimera_sizes = []
+    chimera_lengths = []
+
     chimera_target = 1
     chimera_target4d = 3
     chimera_size = 1
 
-    sequence_length = len(sequences)
-    
-    for _ in range(num_sequences):
-        # Pick first random sequence
-        idx1 = random.randint(0, sequence_length - 1)
+    sequence_count = len(sequences)
+    attempts = 0
+    max_attempts = max(num_sequences * max_attempt_factor, 1000)
+
+    while len(chimera_sequences) < num_sequences and attempts < max_attempts:
+        attempts += 1
+
+        idx1 = random.randint(0, sequence_count - 1)
         seq1 = sequences[idx1]
         len1 = len(seq1)
-        cut1 = random.randint(len1 // 4, 3 * len1 // 4)
-        A = seq1[:cut1]
 
-        # Pick second random sequence
-        idx2 = random.randint(0, sequence_length - 1)
+        idx2 = random.randint(0, sequence_count - 1)
         seq2 = sequences[idx2]
         len2 = len(seq2)
-        cut2 = random.randint(len2 // 4, 3 * len2 // 4)
+
+        if len1 < 2 or len2 < 2:
+            continue
+
+        cut1 = random.randint(max(1, len1 // 4), max(1, 3 * len1 // 4))
+        cut2 = random.randint(max(1, len2 // 4), max(1, 3 * len2 // 4))
+
+        A = seq1[:cut1]
         B = seq2[-cut2:]
-
-        # Concatenate A and B to create the chimera sequence
         chimera_sequence = A + B
+        chimera_len = len(chimera_sequence)
 
-        # Create header for the chimera sequence
+        if chimera_len < min_len or chimera_len > max_len:
+            continue
+
         chimera_header = f"art-chim_{headers[idx1]}_{headers[idx2]}"
-        
-        # Append the chimera sequence and header to the lists
+
         chimera_headers.append(chimera_header)
         chimera_sequences.append(chimera_sequence)
         chimera_sizes.append(chimera_size)
+        chimera_lengths.append(chimera_len)
 
-    # Create the new chimera DataFrame
+    if len(chimera_sequences) < num_sequences:
+        raise RuntimeError(
+            f"Only {len(chimera_sequences)}/{num_sequences} chimeras generated "
+            f"within {min_len}-{max_len} after {attempts} attempts."
+        )
+
+    # --- OPTIONAL: log resulting distribution ---
+    if log_fn:
+        gen_min = min(chimera_lengths)
+        gen_max = max(chimera_lengths)
+        gen_mean = int(sum(chimera_lengths) / len(chimera_lengths))
+
+        log_fn(
+            f"Chimera output stats | "
+            f"generated_min={gen_min}, generated_max={gen_max}, mean={gen_mean}, "
+            f"attempts={attempts}"
+        )
+
     chimera_df = pd.DataFrame({
         'headers': chimera_headers,
         'sequences': chimera_sequences,
         'Target': [chimera_target] * num_sequences,
         'Target4D': [chimera_target4d] * num_sequences,
-        'sizes': chimera_sizes
+        'sizes': [chimera_size] * num_sequences
     })
 
     return chimera_df
-
 
 def create_artificial_errorate(df, num_sequences, typeerror):
     headers = df['headers'].tolist()
