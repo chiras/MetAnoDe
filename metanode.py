@@ -500,14 +500,14 @@ if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, conf
 
     # convert to numpy arrays
     log(f"Converting data")
-    X_train_padded = np.array(X_train_encoded)
-    X_valid_padded = np.array(X_valid_encoded)
+    X_train_padded = np.asarray(X_train_encoded, dtype="int32")
+    X_valid_padded = np.asarray(X_valid_encoded, dtype="int32")
     del X_train_encoded
     del X_valid_encoded
     log("Removed intermediate encoded sequences from memory")
 
-    y_train = np.array(y_train)
-    y_valid = np.array(y_valid)
+    y_train = np.asarray(y_train, dtype="int32")
+    y_valid = np.asarray(y_valid, dtype="int32")
 
     if loss_func=='binary_crossentropy':
         y_train = np.asarray(y_train).astype('float32').reshape((-1,1))
@@ -537,12 +537,9 @@ if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, conf
 
 
     #### for CNN: 
-    sample_size = X_train_padded.shape[0] # number of samples in train set
-    time_steps  = X_train_padded.shape[1] # number of features in train set
-    input_dimension = 1               # each feature is represented by 1 number
-
-    X_padded_reshaped = X_train_padded.reshape(sample_size,time_steps,input_dimension)
-    log(X_padded_reshaped.shape) if verbose else None
+    time_steps = X_train_padded.shape[1]
+    input_dimension = 1
+    log(f"CNN base input kept as padded token matrix: {X_train_padded.shape}") if verbose else None
 
     # remove temporary data
     #del X_train_list
@@ -623,7 +620,8 @@ else:
             X_train_padded,
             y_train,
             epochs=max_epoch_tuner,
-            batch_size=64,
+            batch_size=64,    
+            shuffle=True,
             validation_data=(X_valid_padded, y_valid),
             callbacks=[stop_early]
         )
@@ -635,6 +633,7 @@ else:
     cnn_history = cnn_model.fit(
         X_train_padded,
         y_train,
+        shuffle=True,
         batch_size=64,
         epochs=max_epoch,
         validation_data=(X_valid_padded, y_valid)
@@ -659,6 +658,7 @@ else:
         y_train,
         batch_size=64,
         epochs=1,
+        shuffle=True,
         validation_data=(X_valid_padded, y_valid),
         callbacks=[metrics_callback]
     )
@@ -712,6 +712,7 @@ else:
             X_train_padded,
             y_train,
             batch_size=64,
+            shuffle=True,
             epochs=max_epoch_tuner,
             validation_data=(X_valid_padded, y_valid),
             callbacks=[stop_early]
@@ -725,6 +726,7 @@ else:
         X_train_padded,
         y_train,
         batch_size=64,
+        shuffle=True,
         epochs=max_epoch,
         validation_data=(X_valid_padded, y_valid)
     )
@@ -791,7 +793,7 @@ else:
     inp_cnn  = keras.Input(shape=(n_timesteps, 1), dtype="float32", name="ensemble_cnn_in")
     log("E4") if verbose else None
 
-    models_for_ensemble = [cnn_model, lstm_model]  # order doesn't matter (rank-based routing)
+    models_for_ensemble = [lstm_model, cnn_model]  # order doesn't matter (rank-based routing)
     log("E5") if verbose else None
     ensemble = model_builders.create_ensemble(
         models=models_for_ensemble,
@@ -823,20 +825,31 @@ else:
     )
     log("E8") if verbose else None
 
-    # Ensure validation reshape exists
-    X_valid_padded_reshaped = X_valid_padded.reshape(
-        X_valid_padded.shape[0], X_valid_padded.shape[1], 1
-    )
     log("E9") if verbose else None
 
-    # Train with TWO inputs: [tokens, cnn_features]
-    history = ensemble.fit(
-        x=[X_train_padded, X_padded_reshaped],
-        y=y_train,
-        epochs=max_epoch_ensemble,
+    train_ds = model_builders.make_ensemble_ds(
+        X_train_padded,
+        y_train,
+        cnn_model=cnn_model,
         batch_size=16,
+        shuffle=True,
+        seed=SEED
+    )
+
+    valid_ds = model_builders.make_ensemble_ds(
+        X_valid_padded,
+        y_valid,
+        cnn_model=cnn_model,
+        batch_size=16,
+        shuffle=False,
+        seed=SEED
+    )
+
+    history = ensemble.fit(
+        train_ds,
+        epochs=max_epoch_ensemble,
         verbose=1,
-        validation_data=([X_valid_padded, X_valid_padded_reshaped], y_valid),
+        validation_data=valid_ds,
         callbacks=callbacks,
     )
     log("E10") if verbose else None
@@ -852,20 +865,39 @@ else:
     with open(summary_path, 'a') as f:
         f.write('\n\n-##### Ensemble #####:\n')
 
+    X_valid_cnn_for_metrics = model_builders.make_cnn_view_np(X_valid_padded, cnn_model)
+
     metrics_callback = model_builders.MetricsCallback(
-        test_data=[X_valid_padded, X_valid_padded_reshaped],  # LSTM tokens, CNN 3D
+        test_data=[X_valid_padded, X_valid_cnn_for_metrics],
         y_true=y_valid,
         name=project_name
     )
     log("E11") if verbose else None
 
-    ensemble.fit(
-        [X_train_padded, X_padded_reshaped],  # two inputs
+    train_ds_metrics = model_builders.make_ensemble_ds(
+        X_train_padded,
         y_train,
-        batch_size=64,
+        cnn_model=cnn_model,
+        batch_size=16,
+        shuffle=True,
+        seed=SEED
+    )
+
+    valid_ds_metrics = model_builders.make_ensemble_ds(
+        X_valid_padded,
+        y_valid,
+        cnn_model=cnn_model,
+        batch_size=16,
+        shuffle=False,
+        seed=SEED
+    )
+
+    ensemble.fit(
+        train_ds_metrics,
         epochs=1,
-        validation_data=([X_valid_padded, X_valid_padded_reshaped], y_valid),
-        callbacks=[metrics_callback]
+        validation_data=valid_ds_metrics,
+        callbacks=[metrics_callback],
+        verbose=1
     )
 
 log(f"Ensemble architecture: ") if verbose else None
@@ -879,7 +911,7 @@ if os.path.isfile(val_cache_path):
         _cache = np.load(val_cache_path, allow_pickle=False)
         X_valid_lstm = _cache["X_valid_padded"].astype("int32")      # (N, T)
         y_valid_cached = _cache["y_valid"]
-        X_valid_cnn  = np.expand_dims(X_valid_lstm, axis=-1).astype("float32")  # (N, T, 1)
+        X_valid_cnn = model_builders.make_cnn_view_np(X_valid_lstm, cnn_model)
         VAL = (X_valid_lstm, X_valid_cnn, y_valid_cached)
         log(f"Loaded validation cache from {val_cache_path}: {X_valid_lstm.shape}")
     except Exception as e:
@@ -906,7 +938,14 @@ if VAL is not None:
 
     # 3) Ensemble (two inputs)
     try:
-        ens_loss, ens_acc = ensemble.evaluate([X_valid_lstm, X_valid_cnn], y_valid_cached, verbose=0)
+        ens_loss, ens_acc = ensemble.evaluate(
+            {
+                "ensemble_lstm_in": X_valid_lstm,
+                "ensemble_cnn_in": X_valid_cnn
+            },
+            y_valid_cached,
+            verbose=0
+        )
         log(f"Ensemble-> val_loss={ens_loss:.4f}, val_acc={ens_acc:.4f}")
         best_single_acc = max(locals().get("lstm_acc", 0.0), locals().get("cnn_acc", 0.0))
         log(f"Ensemble gain over best single: {ens_acc - best_single_acc:+.4f}")
@@ -920,11 +959,12 @@ else:
 if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, config_exist]):
     log(f"\n");log(f"Starting validation prediction: ") 
  
-    predictions = ensemble.predict([
-        X_valid_padded,
-        X_valid_padded.reshape(X_valid_padded.shape[0], X_valid_padded.shape[1], 1)
-    ])
+    X_valid_cnn_pred = model_builders.make_cnn_view_np(X_valid_padded, cnn_model)
 
+    predictions = ensemble.predict({
+        "ensemble_lstm_in": X_valid_padded,
+        "ensemble_cnn_in": X_valid_cnn_pred
+    })
     predictions_df = pd.DataFrame(predictions)
     predictions_df = process_dataframe(predictions_df, labels, "EN")
 
@@ -935,7 +975,7 @@ if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, conf
     # predictions_df_lstm = predictions_df_lstm.rename(columns={0: 'pred_lstm'})
     # predictions_df_lstm['pred_bin_lstm'] = (predictions_df_lstm['pred_lstm']).round().astype(int)
 
-    predictions_cnn = cnn_model.predict(X_valid_padded_reshaped)
+    predictions_cnn = cnn_model.predict(X_valid_cnn_pred)
     predictions_df_cnn = pd.DataFrame(predictions_cnn)
     predictions_df_cnn = process_dataframe(predictions_df_cnn, labels, "CNN")
 
@@ -962,19 +1002,17 @@ if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, conf
 
 # predictions query data
 
-log(f"\n");log(f"Starting query prediction: ") 
-sample_size = X_query_padded.shape[0] # number of samples in testing set
-input_dimension = 1               # each feature is represented by 1 number
+log(f"\n");log(f"Starting query prediction: ")
 
 log(X_query_padded.shape) if verbose else None
-# X_query_padded_reshaped = X_query_padded.reshape(sample_size,config["max_len"],input_dimension)
-X_query_padded_reshaped = X_query_padded.reshape(
-    X_query_padded.shape[0], config["max_len"], 1
-)
+X_query_cnn = model_builders.make_cnn_view_np(X_query_padded, cnn_model)
+log(X_query_cnn.shape) if verbose else None
 
-log(X_query_padded_reshaped.shape) if verbose else None
+predictions = ensemble.predict({
+    "ensemble_lstm_in": X_query_padded,
+    "ensemble_cnn_in": X_query_cnn
+})
 
-predictions = ensemble.predict([X_query_padded, X_query_padded_reshaped])
 predictions_df = pd.DataFrame(predictions)
 predictions_df = process_dataframe(predictions_df, labels, "EN")
 
@@ -982,7 +1020,7 @@ predictions_lstm = lstm_model.predict(X_query_padded)
 predictions_df_lstm = pd.DataFrame(predictions_lstm)
 predictions_df_lstm = process_dataframe(predictions_df_lstm, labels, "LSTM")
 
-predictions_cnn = cnn_model.predict(X_query_padded_reshaped)
+predictions_cnn = cnn_model.predict(X_query_cnn)
 predictions_df_cnn = pd.DataFrame(predictions_cnn)
 predictions_df_cnn = process_dataframe(predictions_df_cnn, labels, "CNN")
 

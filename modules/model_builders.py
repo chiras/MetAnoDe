@@ -120,6 +120,64 @@ class CNNHyperModel(kt.HyperModel):
 
         model.compile(loss=self.loss_func,optimizer=optimizer,metrics=['accuracy'])
         return model
+
+def cnn_expects_3d(model):
+    """
+    Returns True if model input is rank-3: (None, T, C)
+    Returns False if model input is rank-2: (None, T)
+    """
+    inp = model.input_shape
+    if isinstance(inp, list):
+        inp = inp[0]
+    return len(inp) == 3
+
+
+def make_cnn_view_np(X, cnn_model):
+    """
+    Build the correct numpy view for CNN prediction/evaluation.
+    Avoids unnecessary copies where possible.
+    """
+    if cnn_expects_3d(cnn_model):
+        return X[..., np.newaxis].astype("float32", copy=False)
+    return X.astype("int32", copy=False)
+
+
+def make_ensemble_ds(X, y, cnn_model, batch_size=16, shuffle=False, seed=None):
+    """
+    Build a tf.data.Dataset for the ensemble model.
+    Creates CNN input on the fly from the same base sequence tensor.
+    """
+    X = X.astype("int32", copy=False)
+
+    ds = tf.data.Dataset.from_tensor_slices((X, y))
+
+    if shuffle:
+        ds = ds.shuffle(
+            buffer_size=min(len(X), 100000),
+            seed=seed,
+            reshuffle_each_iteration=True
+        )
+
+    cnn_3d = cnn_expects_3d(cnn_model)
+
+    def _map(x, y):
+        x_lstm = tf.cast(x, tf.int32)
+
+        if cnn_3d:
+            x_cnn = tf.expand_dims(tf.cast(x, tf.float32), axis=-1)
+        else:
+            x_cnn = tf.cast(x, tf.int32)
+
+        return {
+            "ensemble_lstm_in": x_lstm,
+            "ensemble_cnn_in": x_cnn,
+        }, y
+
+    ds = ds.map(_map, num_parallel_calls=tf.data.AUTOTUNE)
+    ds = ds.batch(batch_size)
+    ds = ds.prefetch(tf.data.AUTOTUNE)
+
+    return ds
     
 def create_ensemble(models, inputs, final_dim, final_activation):
     """
