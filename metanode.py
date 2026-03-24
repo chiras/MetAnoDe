@@ -6,6 +6,7 @@ import pickle
 import numpy as np 
 import pandas as pd 
 import subprocess
+import json
 
 start_time = time.time()
 
@@ -106,6 +107,13 @@ log(f"Random seed: {SEED}")
 
 import contextlib, io, sys
 from tensorflow.python.client import device_lib
+
+def dict_to_hparams(hp_dict):
+    hp = kt.HyperParameters()
+    for key, value in hp_dict.items():
+        hp.Fixed(key, value)
+    return hp
+
 
 def safe_list_devices():
     stderr = io.StringIO()
@@ -214,6 +222,10 @@ model_name_lstm= f"{project_name}_LSTM"
 model_path_lstm = f"models/{model_name_lstm}.keras"
 token_path = f"models/{model_name_en}.token"
 config_path = f"models/{model_name_en}.config"
+
+hp_override_path = f"models/{project_name}.hyperparameters.json"
+hp_override_cnn_path = f"models/{project_name}_CNN.hyperparameters.json"
+hp_override_lstm_path = f"models/{project_name}_LSTM.hyperparameters.json"
 
 model_exist_en = os.path.isfile(model_path_en)
 model_exist_cnn = os.path.isfile(model_path_cnn)
@@ -574,42 +586,83 @@ if model_exist_cnn:
     log(f"\n");log(f"CNN Model loaded successfully.")
 else:
     log(f"\n");log(f"CNN Model file not found. Creating a new model...")
-    cnn_hyper_model = model_builders.CNNHyperModel(n_timesteps=X_padded_reshaped.shape[1],loss_func=loss_func, final_dim=final_dim, final_activation=final_activation,n_features  = X_padded_reshaped.shape[2])
-    metrics_callback = model_builders.MetricsCallback(test_data=X_valid_padded, y_true=y_valid, name=project_name)
+    cnn_hyper_model = model_builders.CNNHyperModel(
+        n_timesteps=X_train_padded.shape[1],
+        loss_func=loss_func,
+        final_dim=final_dim,
+        final_activation=final_activation,
+        n_features=1
+    )
+    metrics_callback = model_builders.MetricsCallback(
+        test_data=X_valid_padded,
+        y_true=y_valid,
+        name=project_name
+    )
 
-    cnn_tuner = kt.Hyperband(cnn_hyper_model,
-                        objective='val_accuracy',
-                        max_epochs=max_epoch_tuner,
-                        factor=3,
-                        directory='tuner',
-                        project_name=model_name)
+    # try model-specific override first, then shared file
+    cnn_hp_override = helper.load_hp_override(hp_override_cnn_path, "CNN")
+    if cnn_hp_override is None:
+        cnn_hp_override = helper.load_hp_override(hp_override_path, "CNN")
 
-    stop_early = keras.callbacks.EarlyStopping(monitor='val_loss', patience=5)
-        
-    cnn_tuner.search(X_train_padded, y_train, epochs=max_epoch_tuner, batch_size=64, validation_data=(X_valid_padded, y_valid), callbacks=[stop_early])
-    best_hps=cnn_tuner.get_best_hyperparameters(num_trials=1)[0]
-    log(f' CNN Hyperparameter Tuning completed\n\n')
-    log(f"{best_hps.values}")
+    if cnn_hp_override is not None:
+        best_hps = dict_to_hparams(cnn_hp_override)
+        log("Skipping CNN tuner because static hyperparameter override is present.")
+    else:
+        cnn_tuner = kt.Hyperband(
+            cnn_hyper_model,
+            objective='val_accuracy',
+            max_epochs=max_epoch_tuner,
+            factor=3,
+            directory='tuner',
+            project_name=model_name
+        )
 
-    cnn_model = cnn_tuner.hypermodel.build(best_hps)
-    cnn_history = cnn_model.fit(X_train_padded, y_train, batch_size=64, epochs=max_epoch, validation_data=(X_valid_padded, y_valid))
-    log(f' CNN Model completed\n\n')
+        stop_early = keras.callbacks.EarlyStopping(monitor='val_loss', patience=5)
+
+        cnn_tuner.search(
+            X_train_padded,
+            y_train,
+            epochs=max_epoch_tuner,
+            batch_size=64,
+            validation_data=(X_valid_padded, y_valid),
+            callbacks=[stop_early]
+        )
+        best_hps = cnn_tuner.get_best_hyperparameters(num_trials=1)[0]
+        log('CNN Hyperparameter Tuning completed\n')
+        log(f"{best_hps.values}")
+
+    cnn_model = cnn_hyper_model.build(best_hps)
+    cnn_history = cnn_model.fit(
+        X_train_padded,
+        y_train,
+        batch_size=64,
+        epochs=max_epoch,
+        validation_data=(X_valid_padded, y_valid)
+    )
+    log('CNN Model completed\n')
 
     val_acc_per_epoch = cnn_history.history['val_accuracy']
     best_epoch = val_acc_per_epoch.index(max(val_acc_per_epoch)) + 1
-    log(f' Best epoch: %d' % (best_epoch,))
+    log(f'Best epoch: {best_epoch}')
 
-    cnn_model.save(model_path)  # Save the model to a HDF5 file
-    log(f"CNN Model saved successfully.")
+    cnn_model.save(model_path)
+    log("CNN Model saved successfully.")
 
-    helper.plot_history(cnn_history,model_name, best_hps.values)
+    helper.plot_history(cnn_history, model_name, best_hps.values)
     helper.save_summary(cnn_model, cnn_history, best_hps, model_name)
 
     with open(summary_path, 'a') as f:
         f.write('##### CNN #####:\n')
 
-    cnn_model.fit(X_train_padded, y_train, batch_size=64, epochs=1, validation_data=(X_valid_padded, y_valid), callbacks=[metrics_callback])
-
+    cnn_model.fit(
+        X_train_padded,
+        y_train,
+        batch_size=64,
+        epochs=1,
+        validation_data=(X_valid_padded, y_valid),
+        callbacks=[metrics_callback]
+    )
+    
 log(f"CNN architecture: ") if verbose else None
 log(cnn_model.summary()) if verbose else None
 
@@ -623,41 +676,81 @@ if model_exist_lstm:
     log(f"\n");log(f"LSTM Model loaded successfully.")
 else:
     log(f"\n");log(f"LSTM Model file not found. Creating a new model...")
-    lstm_hyper_model = model_builders.LSTMHyperModel(encoder=encoder,loss_func=loss_func, final_dim=final_dim, final_activation=final_activation)
-    metrics_callback = model_builders.MetricsCallback(test_data=X_valid_padded, y_true=y_valid, name=project_name)
+    lstm_hyper_model = model_builders.LSTMHyperModel(
+        encoder=encoder,
+        loss_func=loss_func,
+        final_dim=final_dim,
+        final_activation=final_activation
+    )
+    metrics_callback = model_builders.MetricsCallback(
+        test_data=X_valid_padded,
+        y_true=y_valid,
+        name=project_name
+    )
 
-    lstm_tuner = kt.Hyperband(lstm_hyper_model,
-                        objective='val_accuracy',
-                        max_epochs=max_epoch_tuner,
-                        factor=3,
-                        directory='tuner',
-                        project_name=model_name)
+    # try model-specific override first, then shared file
+    lstm_hp_override = helper.load_hp_override(hp_override_lstm_path, "LSTM")
+    if lstm_hp_override is None:
+        lstm_hp_override = helper.load_hp_override(hp_override_path, "LSTM")
 
-    stop_early = keras.callbacks.EarlyStopping(monitor='val_loss', patience=5)
+    if lstm_hp_override is not None:
+        best_hps = dict_to_hparams(lstm_hp_override)
+        log("Skipping LSTM tuner because static hyperparameter override is present.")
+    else:
+        lstm_tuner = kt.Hyperband(
+            lstm_hyper_model,
+            objective='val_accuracy',
+            max_epochs=max_epoch_tuner,
+            factor=3,
+            directory='tuner',
+            project_name=model_name
+        )
 
-    lstm_tuner.search(X_train_padded, y_train, batch_size=64, epochs=max_epoch_tuner, validation_data=(X_valid_padded, y_valid), callbacks=[stop_early])
-    best_hps=lstm_tuner.get_best_hyperparameters(num_trials=1)[0]
-    log(f' LSTM Hyperparameter Tuning completed\n\n')
-    log(f"{best_hps.values}")
+        stop_early = keras.callbacks.EarlyStopping(monitor='val_loss', patience=5)
 
-    lstm_model = lstm_tuner.hypermodel.build(best_hps)
-    lstm_history = lstm_model.fit(X_train_padded, y_train, batch_size=64, epochs=max_epoch, validation_data=(X_valid_padded, y_valid))
+        lstm_tuner.search(
+            X_train_padded,
+            y_train,
+            batch_size=64,
+            epochs=max_epoch_tuner,
+            validation_data=(X_valid_padded, y_valid),
+            callbacks=[stop_early]
+        )
+        best_hps = lstm_tuner.get_best_hyperparameters(num_trials=1)[0]
+        log('LSTM Hyperparameter Tuning completed\n')
+        log(f"{best_hps.values}")
+
+    lstm_model = lstm_hyper_model.build(best_hps)
+    lstm_history = lstm_model.fit(
+        X_train_padded,
+        y_train,
+        batch_size=64,
+        epochs=max_epoch,
+        validation_data=(X_valid_padded, y_valid)
+    )
 
     val_acc_per_epoch = lstm_history.history['val_accuracy']
     best_epoch = val_acc_per_epoch.index(max(val_acc_per_epoch)) + 1
-    log(f' Best epoch: %d' % (best_epoch,))
-    log(f' LSTM Model completed\n\n')
+    log(f'Best epoch: {best_epoch}')
+    log('LSTM Model completed\n')
 
-    lstm_model.save(model_path)  # Save the model to a HDF5 file
-    log(f"Model saved successfully.")
+    lstm_model.save(model_path)
+    log("Model saved successfully.")
 
-    helper.plot_history(lstm_history,model_name, best_hps.values)
+    helper.plot_history(lstm_history, model_name, best_hps.values)
     helper.save_summary(lstm_model, lstm_history, best_hps, model_name)
 
     with open(summary_path, 'a') as f:
         f.write('\n\n##### LSTM #####:\n')
 
-    lstm_model.fit(X_train_padded, y_train, batch_size=64, epochs=1, validation_data=(X_valid_padded, y_valid), callbacks=[metrics_callback])
+    lstm_model.fit(
+        X_train_padded,
+        y_train,
+        batch_size=64,
+        epochs=1,
+        validation_data=(X_valid_padded, y_valid),
+        callbacks=[metrics_callback]
+    )
 
 log(f"LSTM architecture: ") if verbose else None
 log(lstm_model.summary()) if verbose else None

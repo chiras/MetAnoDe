@@ -9,6 +9,31 @@ import json
 
 os.makedirs("plots", exist_ok=True)
 os.makedirs("predictions", exist_ok=True)
+
+def load_hp_override(json_path, model_label):
+    """
+    Load static hyperparameters from JSON if present.
+    Returns dict or None.
+    Supports either:
+      {"learning_rate": 0.0003, ...}
+    or:
+      {"CNN": {...}, "LSTM": {...}}
+    """
+    if not os.path.isfile(json_path):
+        return None
+
+    with open(json_path, "r") as f:
+        data = json.load(f)
+
+    # allow nested model-specific structure
+    if model_label in data and isinstance(data[model_label], dict):
+        hp = data[model_label]
+    else:
+        hp = data
+
+    print(f"Loaded hyperparameter override for {model_label} from {json_path}: {hp}")
+    return hp
+
 def split_files_exist(project_name: str, split_dir: str = "splits") -> bool:
     paths = get_split_paths(project_name, split_dir)
     return all(os.path.isfile(p) for p in paths.values())
