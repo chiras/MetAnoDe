@@ -2,6 +2,10 @@
 .DS_Store
 tuner
 splits
+models
+logs
+plots
+*.pyc
 ._*
 data/.DS_Store
 models/.DS_Store
