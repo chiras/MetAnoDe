@@ -41,7 +41,7 @@ All dependencies need to be installed for proper execution of the code.
 Here an example to install in a conda environment:
 
 ```sh
-conda create --name metanode python=3.12
+conda create --name metanode python=3.11
 conda activate metanode
 
 conda install tensorflow=2.17
