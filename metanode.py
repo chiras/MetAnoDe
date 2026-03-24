@@ -21,6 +21,14 @@ parser.add_argument('-v', dest='verbose', action='store_true', required=False, h
 parser.add_argument('-t', dest='threads', required=False, help="Number of threads")
 parser.add_argument('-ot', dest='offtargets', required=False, help="Number of threads")
 parser.add_argument('-seed', dest='seed', required=False, help="Seed for randomization")
+parser.add_argument(
+    '--target_len',
+    dest='target_len',
+    required=False,
+    type=int,
+    default=290,
+    help="Expected amplicon length (used for length filtering, default=330)"
+)
 
 args = parser.parse_args()
 project_name=args.project_name 
@@ -290,9 +298,50 @@ def get_git_info_simple():
 count, short, full, src = get_git_info_simple()
 log(f"Git: {short} (#{count}) {full} [{src}]")
 
+def length_stats_str(df, seq_col="sequences"):
+    """
+    Return formatted sequence length stats for a dataframe.
+    """
+    lengths = df[seq_col].str.len()
+    return f"min={int(lengths.min())}, max={int(lengths.max())}, mean={lengths.mean():.1f}"
+
+def filter_by_length(df, target_len, lower_factor=0.5, upper_factor=1.5):
+    lower = int(target_len * lower_factor)
+    upper = int(target_len * upper_factor)
+
+    lengths = df["sequences"].str.len()
+
+    mask = (lengths >= lower) & (lengths <= upper)
+
+    df_filtered = df[mask].reset_index(drop=True)
+
+    stats = {
+        "before_n": len(df),
+        "after_n": len(df_filtered),
+        "removed_n": len(df) - len(df_filtered),
+        "lower": lower,
+        "upper": upper
+    }
+
+    return df_filtered, stats
+
 def generate_balanced_dataset(args, balance_4C, labels, verbose=False):
     sequences_dict_true = helper.read_fasta(args.true_file, 0, 0)
     log(sequences_dict_true) if verbose else None
+
+    # --- length filtering ---
+    sequences_dict_true, length_filter_stats = filter_by_length(
+        sequences_dict_true,
+        target_len=args.target_len,
+        lower_factor=0.75, upper_factor=1.25
+    )
+
+    log(
+        f"Length filter applied: kept {length_filter_stats['after_n']}/"
+        f"{length_filter_stats['before_n']} "
+        f"(removed {length_filter_stats['removed_n']}) | "
+        f"range [{length_filter_stats['lower']}, {length_filter_stats['upper']}]"
+    )
 
     tr_len = len(sequences_dict_true)
     max_rows = int(tr_len * 2)
@@ -300,28 +349,36 @@ def generate_balanced_dataset(args, balance_4C, labels, verbose=False):
     if not balance_4C:
         max_rows = int(max_rows / 3)
 
-    log(f"\n"); log(f"Received {len(sequences_dict_true)} original sequences (Class 0)")
+    log(f"\n"); log(f"Received {len(sequences_dict_true)} original sequences (Class 0) | {length_stats_str(sequences_dict_true)}")
 
     sequences_dict_f1_balanced = helper.create_artificial_errorate(sequences_dict_true, max_rows, "subst")
-    log(f"Created {len(sequences_dict_f1_balanced)} artifical high substitution rate sequences (Class 1)")
+    log(f"Created {len(sequences_dict_f1_balanced)} artifical high substitution rate sequences (Class 1) | {length_stats_str(sequences_dict_f1_balanced)}")
 
     sequences_dict_f2_balanced = helper.create_artificial_errorate(sequences_dict_true, max_rows, "indel")
-    log(f"Created {len(sequences_dict_f2_balanced)} artifical high indel rate sequences (Class 2)")
+    log(f"Created {len(sequences_dict_f2_balanced)} artifical high indel rate sequences (Class 2) | {length_stats_str(sequences_dict_f2_balanced)}")
 
     sequences_dict_f3_balanced = helper.create_artificial_chimera(
         sequences_dict_true,
         max_rows,
+        target_len=args.target_len,
         log_fn=log
     )
-    log(f"Created {len(sequences_dict_f3_balanced)} artifical chimeric sequences (Class 3)")
+    log(f"Created {len(sequences_dict_f3_balanced)} artifical chimeric sequences (Class 3) | {length_stats_str(sequences_dict_f3_balanced)}")
 
     sequences_dict_true_lowsubst = helper.create_artificial_errorate(sequences_dict_true, int(tr_len / 2), "lowsubst")
+    log(f"Created {len(sequences_dict_true_lowsubst)} artifical low substitution sequences (Class 0) | {length_stats_str(sequences_dict_true_lowsubst)}")
+
     sequences_dict_true_lowindel = helper.create_artificial_errorate(sequences_dict_true, int(tr_len / 2), "lowindel")
+    log(f"Created {len(sequences_dict_true_lowindel)} artifical low indel sequences (Class 0) | {length_stats_str(sequences_dict_true_lowindel)}")
+
     sequences_dict_true_balanced = pd.concat(
         [sequences_dict_true, sequences_dict_true_lowsubst, sequences_dict_true_lowindel],
         ignore_index=True
     )
-    log(f"Created {len(sequences_dict_true_lowsubst)} + {len(sequences_dict_true_lowindel)} artifical low error sequences (Class 0)")
+    log(
+        f"Combined Class 0 true + low-error sequences: {len(sequences_dict_true_balanced)} | "
+        f"{length_stats_str(sequences_dict_true_balanced)}"
+    )
 
     if args.offtargets is not None:
         split_list = args.offtargets.split(',')
@@ -337,8 +394,12 @@ def generate_balanced_dataset(args, balance_4C, labels, verbose=False):
                 type_ot = "(downsampled)"
             else:
                 missing_rows = max_rows - ot_len
-                sequences_dict_ot_lowsubst = helper.create_artificial_errorate(sequences_dict_offtarget, int(missing_rows / 2), "lowsubst")
-                sequences_dict_ot_lowindel = helper.create_artificial_errorate(sequences_dict_offtarget, int(missing_rows / 2), "lowindel")
+                sequences_dict_ot_lowsubst = helper.create_artificial_errorate(
+                    sequences_dict_offtarget, int(missing_rows / 2), "lowsubst"
+                )
+                sequences_dict_ot_lowindel = helper.create_artificial_errorate(
+                    sequences_dict_offtarget, int(missing_rows / 2), "lowindel"
+                )
                 sequences_dict_offtarget = pd.concat(
                     [sequences_dict_offtarget, sequences_dict_ot_lowsubst, sequences_dict_ot_lowindel],
                     ignore_index=True
@@ -349,10 +410,16 @@ def generate_balanced_dataset(args, balance_4C, labels, verbose=False):
             sequences_dict_offtarget["Target4D"] = i
             sequences_dict_offtarget["Target"] = 1
             labels[i] = f"OffTarget-{i}"
-            log(f"Added {len_ot} {type_ot} Off-target Class {i} ({offtarget})")
+            log(
+                f"Added {len_ot} {type_ot} Off-target Class {i} ({offtarget}) | "
+                f"{length_stats_str(sequences_dict_offtarget)}"
+            )
             i += 1
 
-            sequences_dict_offtarget_all = pd.concat([sequences_dict_offtarget_all, sequences_dict_offtarget], ignore_index=True)
+            sequences_dict_offtarget_all = pd.concat(
+                [sequences_dict_offtarget_all, sequences_dict_offtarget],
+                ignore_index=True
+            )
             del sequences_dict_offtarget
     else:
         sequences_dict_offtarget_all = helper.sample_dataframe(sequences_dict_true_balanced, 0)
@@ -368,7 +435,7 @@ def generate_balanced_dataset(args, balance_4C, labels, verbose=False):
         ignore_index=True
     )
 
-    log(f"Balanced dataset created")
+    log(f"Balanced dataset created | total={len(X_train_balanced)} | {length_stats_str(X_train_balanced)}")
     return X_train_balanced, labels
 
 # load in reference data
