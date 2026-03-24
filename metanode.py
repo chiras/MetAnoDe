@@ -52,6 +52,7 @@ random.seed(SEED)
 np.random.seed(SEED)
 
 import tensorflow as tf
+
 # Tame absl once TF is imported
 from absl import logging as absl_logging
 absl_logging.set_verbosity(absl_logging.ERROR)
@@ -307,7 +308,11 @@ def generate_balanced_dataset(args, balance_4C, labels, verbose=False):
     sequences_dict_f2_balanced = helper.create_artificial_errorate(sequences_dict_true, max_rows, "indel")
     log(f"Created {len(sequences_dict_f2_balanced)} artifical high indel rate sequences (Class 2)")
 
-    sequences_dict_f3_balanced = helper.create_artificial_chimera(sequences_dict_true, max_rows)
+    sequences_dict_f3_balanced = helper.create_artificial_chimera(
+        sequences_dict_true,
+        max_rows,
+        log_fn=log
+    )
     log(f"Created {len(sequences_dict_f3_balanced)} artifical chimeric sequences (Class 3)")
 
     sequences_dict_true_lowsubst = helper.create_artificial_errorate(sequences_dict_true, int(tr_len / 2), "lowsubst")
@@ -495,8 +500,19 @@ if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, conf
     # Pad sequences
     log(f"Padding data")
 
-    X_train_encoded =  keras.preprocessing.sequence.pad_sequences(X_train_encoded, maxlen=config["max_len"], padding='post')
-    X_valid_encoded =  keras.preprocessing.sequence.pad_sequences(X_valid_encoded, maxlen=config["max_len"], padding='post')  
+    X_train_encoded = keras.preprocessing.sequence.pad_sequences(
+        X_train_encoded,
+        maxlen=config["max_len"],
+        padding='post',
+        truncating='post'
+    )
+
+    X_valid_encoded = keras.preprocessing.sequence.pad_sequences(
+        X_valid_encoded,
+        maxlen=config["max_len"],
+        padding='post',
+        truncating='post'
+    )
 
     # convert to numpy arrays
     log(f"Converting data")
@@ -568,7 +584,12 @@ log(f"Epochs: {max_epoch}")
 X_query_final = sequences_dict_query.drop(columns=['headers','Target','Target4D','sizes'])  # Features
 X_query_list = X_query_final['sequences'].tolist()
 X_query_encoded = encoder.texts_to_sequences(X_query_list)
-X_query_encoded =  keras.preprocessing.sequence.pad_sequences(X_query_encoded, maxlen=config["max_len"], padding='post')
+X_query_encoded = keras.preprocessing.sequence.pad_sequences(
+    X_query_encoded,
+    maxlen=config["max_len"],
+    padding='post',
+    truncating='post'
+)
 X_query_padded = np.array(X_query_encoded)
 
 
