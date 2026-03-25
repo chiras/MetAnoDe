@@ -17,3 +17,7 @@ data/data_best_models_Ubuntu/not_used_ITS2.Quaresma2024.all.trimmedpy2.fasta
 data/data_best_models_Ubuntu/ITS2.Quaresma2024-Sickel2015.fasta
 data/data_best_models_Ubuntu/call_ubuntu.sh
 data/.DS_Store
+splits/*.csv.gz
+
+splits/*.csv.gz
+models/*_cache.npz

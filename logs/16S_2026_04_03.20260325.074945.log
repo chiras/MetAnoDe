@@ -1,0 +1,203 @@
+[MetAnoDe: 16S_2026_04_03: 00:00:01] Random seed: 1774421383
+[MetAnoDe: 16S_2026_04_03: 00:00:01] ## Devices available: 
+[MetAnoDe: 16S_2026_04_03: 00:00:02] name: "/device:CPU:0"
+device_type: "CPU"
+memory_limit: 268435456
+locality {
+}
+incarnation: 9325886089907766395
+xla_global_id: -1
+
+[MetAnoDe: 16S_2026_04_03: 00:00:02] name: "/device:GPU:0"
+device_type: "GPU"
+memory_limit: 14163902464
+locality {
+  bus_id: 1
+  links {
+  }
+}
+incarnation: 142837629870752321
+physical_device_desc: "device: 0, name: NVIDIA GeForce RTX 4070 Ti SUPER, pci bus id: 0000:0a:00.0, compute capability: 8.9"
+xla_global_id: 416903419
+
+[MetAnoDe: 16S_2026_04_03: 00:00:02] CUDA version:
+[MetAnoDe: 16S_2026_04_03: 00:00:02] 12.4
+[MetAnoDe: 16S_2026_04_03: 00:00:05] Git: a4300ec (#79) a4300ec9ac8b95eb2705563c9cd2fc66e36b3e45 [/home/ciya/Documents/MetAnoDe]
+[MetAnoDe: 16S_2026_04_03: 00:00:05] 
+
+[MetAnoDe: 16S_2026_04_03: 00:00:05] Not all required models and configs are available, regenerating necessary ones
+[MetAnoDe: 16S_2026_04_03: 00:00:05] This might take a while, depending on whether models are missing or need to be tuned...
+[MetAnoDe: 16S_2026_04_03: 00:00:08]                                                   headers                                          sequences  Target  Target4D  sizes
+0       EF175875.1.1455;tax=d:Bacteria,p:Firmicutes,o:...  TACGTAGGTGGCAAGCGTTATCCGGAATTATTGGGCGTAAAGCGCG...       0         0      1
+1       AY281080.1.1428;tax=d:Bacteria,p:Firmicutes,o:...  TACGTAGGTCCCGAGCGTTGTCCGGATTTATTGGGCGTAAAGCGAG...       0         0      1
+2       AB004764.1.1453;tax=d:Bacteria,p:Firmicutes,o:...  TACGTAGGTGGCAAGCGTTATCCGGAATTATTGGGCGTAAAGCGCG...       0         0      1
+3       U70214.54846.56387;tax=d:Bacteria,p:Proteobact...  TACGGAGGGTGCAAGCGTTAATCGGAATTACTGGGCGTAAAGCGCA...       0         0      1
+4       X80498.1.1393;tax=d:Bacteria,p:Actinobacteria,...  TACGTAGGGTGCGAGCGTTGTCCGGAATTACTGGGCGTAAAGGGCT...       0         0      1
+...                                                   ...                                                ...     ...       ...    ...
+241194  Z96082.1.1440;tax=d:Bacteria,p:Proteobacteria,...  TACGGAGGGTGCAAGCGTTAATCGGAATTACTGGGCGTAAAGCGCA...       0         0      1
+241195  Z96086.1.1496;tax=d:Bacteria,p:Proteobacteria,...  TACGGAGGGTGCAAGCGTTAATCGGAATTACTGGGCGTAAAGCGCA...       0         0      1
+241196  Z96088.1.1481;tax=d:Bacteria,p:Proteobacteria,...  TACGGAGGGTGCAAGCGTTAATCGGAATTACTGGGCGTAAAGCGCA...       0         0      1
+241197  Z96089.1.1497;tax=d:Bacteria,p:Proteobacteria,...  TACGGAGGGTGCAAGCGTTAATCGGAATGACTGGGCGTAAAGCGCA...       0         0      1
+241198  Z96092.1.1496;tax=d:Bacteria,p:Proteobacteria,...  TACGGAGGGTGCAAGCGTTAATCGGAATGACTGGGCGTAAAGCGCA...       0         0      1
+
+[241199 rows x 5 columns]
+[MetAnoDe: 16S_2026_04_03: 00:00:08] Estimated target_len from data using median: 253 | mean=253.2, min=82, max=641
+[MetAnoDe: 16S_2026_04_03: 00:00:08] Length filter applied: kept 241074/241199 (removed 125) | range [189, 316]
+[MetAnoDe: 16S_2026_04_03: 00:00:08] 
+
+[MetAnoDe: 16S_2026_04_03: 00:00:08] Received 241074 original sequences (Class 0) | min=189, max=316, mean=253.1, median=253.0
+[MetAnoDe: 16S_2026_04_03: 00:00:27] Created 482148 artifical high substitution rate sequences (Class 1) | min=189, max=316, mean=253.1, median=253.0
+[MetAnoDe: 16S_2026_04_03: 00:00:57] Created 482148 artifical high indel rate sequences (Class 2) | min=183, max=325, mean=253.1, median=253.0
+[MetAnoDe: 16S_2026_04_03: 00:00:57] Chimera length settings | orig_min=189, orig_max=316, target=253, final_min=126, final_max=380
+[MetAnoDe: 16S_2026_04_03: 00:00:59] Chimera output stats | generated_min=126, generated_max=380, mean=252, attempts=482173
+[MetAnoDe: 16S_2026_04_03: 00:00:59] Created 482148 artifical chimeric sequences (Class 3) | min=126, max=380, mean=252.2, median=252.0
+[MetAnoDe: 16S_2026_04_03: 00:01:03] Created 120537 artifical low substitution sequences (Class 0) | min=193, max=316, mean=253.1, median=253.0
+[MetAnoDe: 16S_2026_04_03: 00:01:10] Created 120537 artifical low indel sequences (Class 0) | min=187, max=313, mean=253.1, median=253.0
+[MetAnoDe: 16S_2026_04_03: 00:01:10] Combined Class 0 true + low-error sequences: 482148 | min=187, max=316, mean=253.1, median=253.0
+[MetAnoDe: 16S_2026_04_03: 00:01:31] Added 482148 (upsampled) Off-target Class 4 (data/16S.mitochondria.trim.1.derep.fasta) | min=155, max=261, mean=236.5, median=251.0
+[MetAnoDe: 16S_2026_04_03: 00:01:52] Added 482148 (upsampled) Off-target Class 5 (data/16S.chloroplast.trim.1.derep.fasta) | min=180, max=261, mean=235.2, median=245.0
+[MetAnoDe: 16S_2026_04_03: 00:01:53] Balanced dataset created | total=2892888 | min=126, max=380, mean=247.2, median=253.0
+[MetAnoDe: 16S_2026_04_03: 00:01:54] Shuffled data with seed 1774421383
+[MetAnoDe: 16S_2026_04_03: 00:01:55] Split data to train and validation (stratified)
+[MetAnoDe: 16S_2026_04_03: 00:05:07] Saved new split for project '16S_2026_04_03'
+[MetAnoDe: 16S_2026_04_03: 00:05:07] Split metadata: {'project_name': '16S_2026_04_03', 'seed': 1774421383, 'test_size': 0.25, 'balance_4C': True, 'loss_func': 'sparse_categorical_crossentropy', 'query_file': 'data/16S.silva.trim.derep.fa', 'true_file': 'data/16S.silva.trim.derep.fa', 'offtargets': 'data/16S.mitochondria.trim.1.derep.fasta,data/16S.chloroplast.trim.1.derep.fasta', 'n_train': 2169666, 'n_valid': 723222, 'labels': {0: 'positive', 1: 'substitution', 2: 'indels', 3: 'chimera', 4: 'OffTarget-4', 5: 'OffTarget-5'}, 'max_len': 380, 'output_dim': 6, 'git_commit_short': 'a4300ec', 'git_commit_full': 'a4300ec9ac8b95eb2705563c9cd2fc66e36b3e45'}
+[MetAnoDe: 16S_2026_04_03: 00:05:07]                                                    headers                                          sequences  Target  Target4D  sizes
+338521                          low-subst_OR138103.1:100.0  GACGGGGGGGGCAAGTGTTCTTCGGAATGACTGGGCGTAAAGGGCA...       1         4      1
+674529   FJ370813.1.1335;tax=d:Bacteria,p:Firmicutes,o:...  AACGTAGGTCACAAGCGTTGTCCGGAATTACTGGGTGTAAAGGGAG...       0         0      1
+85173    EF173322.1.1464;tax=d:Bacteria,p:Proteobacteri...  TACGAAGGGGGCTAGCGTTGTTCGGAATTACTGGGCGTAAAGCGCA...       0         0      1
+2561667                          low-subst_AF350259.1:90.5  GACGGAGGATGCAAGCGTTATCCGGAATGATTGGGCGTAAAGCGTC...       1         5      1
+622131                           low-indel_AF350260.1:90.4  GACGGAGGATGCAAGCGTTATCCGCGAATGATTGGCGTAAAGCGTC...       1         5      1
+...                                                    ...                                                ...     ...       ...    ...
+2709950                          low-indel_JF278147.1:99.1  GACAGAGCGATGCAAGCGTTATCCGGAATGATTGGGCTAAAGCGTC...       1         5      1
+1995287  art-indel_JF198633.1.1366;tax=d:Bacteria,p:Fir...  ACGTANGTCCCGAGCGTTGTCCGAGATTTATTGGGGCGAAGCGAGC...       1         2      1
+2298075                          low-indel_JF268797.1:98.8  GACGGGGGGGGCAAGTGTTCTTCGGAATGACTGGGCGTAAAGGGCA...       1         4      1
+2091754  low-subst_CU920964.1.1355;tax=d:Bacteria,p:Bac...  TACGGAGGATGCGAGCGTTATCCGGATTTATTGGGTTTAAAGGGTG...       0         0      1
+275007   art-chim_EU462798.1.1383;tax=d:Bacteria,p:Firm...  TACGTAGGGGGCAAGCGTTATCCGGATTTACTGGGTGTAAAGGGAG...       1         3      1
+
+[2169666 rows x 5 columns]
+[MetAnoDe: 16S_2026_04_03: 00:05:07] Removed temporary data from memory
+[MetAnoDe: 16S_2026_04_03: 00:05:07] Encoding data
+[MetAnoDe: 16S_2026_04_03: 00:06:49] Removed raw sequence lists from memory
+[MetAnoDe: 16S_2026_04_03: 00:06:49]   Character  Encoding
+0         g         1
+1         a         2
+2         t         3
+3         c         4
+4         n         5
+5     <PAD>         0
+[MetAnoDe: 16S_2026_04_03: 00:06:49] Padding data
+[MetAnoDe: 16S_2026_04_03: 00:07:17] Converting data
+[MetAnoDe: 16S_2026_04_03: 00:07:17] Removed intermediate encoded sequences from memory
+[MetAnoDe: 16S_2026_04_03: 00:07:39] Saved validation cache to models/16S_2026_04_03_val_cache.npz
+[MetAnoDe: 16S_2026_04_03: 00:07:39] CNN base input kept as padded token matrix: (2169666, 380)
+[MetAnoDe: 16S_2026_04_03: 00:07:39] Modeling 6 Classes
+[MetAnoDe: 16S_2026_04_03: 00:07:39] Class labels: {0: 'positive', 1: 'substitution', 2: 'indels', 3: 'chimera', 4: 'OffTarget-4', 5: 'OffTarget-5'}
+[MetAnoDe: 16S_2026_04_03: 00:07:39] Epochs: 20
+[MetAnoDe: 16S_2026_04_03: 00:07:46] 
+
+[MetAnoDe: 16S_2026_04_03: 00:07:46] CNN Model file not found. Creating a new model...
+[MetAnoDe: 16S_2026_04_03: 00:07:46] Skipping CNN tuner because static hyperparameter override is present.
+[MetAnoDe: 16S_2026_04_03: 00:26:56] CNN Model completed
+
+[MetAnoDe: 16S_2026_04_03: 00:26:56] Best epoch: 20
+[MetAnoDe: 16S_2026_04_03: 00:26:56] CNN Model saved successfully.
+[MetAnoDe: 16S_2026_04_03: 00:28:18] CNN architecture: 
+[MetAnoDe: 16S_2026_04_03: 00:28:18] None
+[MetAnoDe: 16S_2026_04_03: 00:28:18] 
+
+[MetAnoDe: 16S_2026_04_03: 00:28:18] LSTM Model file not found. Creating a new model...
+[MetAnoDe: 16S_2026_04_03: 00:28:18] Skipping LSTM tuner because static hyperparameter override is present.
+[MetAnoDe: 16S_2026_04_03: 03:54:52] Best epoch: 19
+[MetAnoDe: 16S_2026_04_03: 03:54:52] LSTM Model completed
+
+[MetAnoDe: 16S_2026_04_03: 03:54:52] Model saved successfully.
+[MetAnoDe: 16S_2026_04_03: 04:07:54] LSTM architecture: 
+[MetAnoDe: 16S_2026_04_03: 04:07:54] None
+[MetAnoDe: 16S_2026_04_03: 04:07:54] 380
+[MetAnoDe: 16S_2026_04_03: 04:07:54] 
+
+[MetAnoDe: 16S_2026_04_03: 04:07:54] ENSEMBLE Model not found, creating new.
+[MetAnoDe: 16S_2026_04_03: 04:07:54] Data shape: (2169666, 380)
+[MetAnoDe: 16S_2026_04_03: 04:07:54] CNN input shape: (None, 380, 1)
+[MetAnoDe: 16S_2026_04_03: 04:07:54] LSTM input shape: (None, 380)
+[MetAnoDe: 16S_2026_04_03: 04:07:54] E2
+[MetAnoDe: 16S_2026_04_03: 04:07:54] E3
+[MetAnoDe: 16S_2026_04_03: 04:07:54] E4
+[MetAnoDe: 16S_2026_04_03: 04:07:54] E5
+[MetAnoDe: 16S_2026_04_03: 04:07:54] E6
+[MetAnoDe: 16S_2026_04_03: 04:07:54] E7
+[MetAnoDe: 16S_2026_04_03: 04:07:54] E8
+[MetAnoDe: 16S_2026_04_03: 04:07:54] E9
+[MetAnoDe: 16S_2026_04_03: 06:50:16] E10
+[MetAnoDe: 16S_2026_04_03: 06:50:16] Saving Ensemble
+[MetAnoDe: 16S_2026_04_03: 06:50:17] E11
+[MetAnoDe: 16S_2026_04_03: 06:53:04] Ensemble architecture:
+[MetAnoDe: 16S_2026_04_03: 06:53:04] Model: "ensemble"
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Layer (type)                  ┃ Output Shape              ┃         Param # ┃ Connected to               ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ ensemble_lstm_in (InputLayer) │ (None, 380)               │               0 │ -                          │
+├───────────────────────────────┼───────────────────────────┼─────────────────┼────────────────────────────┤
+│ ensemble_cnn_in (InputLayer)  │ (None, 380, 1)            │               0 │ -                          │
+├───────────────────────────────┼───────────────────────────┼─────────────────┼────────────────────────────┤
+│ sequential (Sequential)       │ (None, 6)                 │          83,590 │ ensemble_lstm_in[0][0]     │
+├───────────────────────────────┼───────────────────────────┼─────────────────┼────────────────────────────┤
+│ model_conv1D (Sequential)     │ (None, 6)                 │         102,525 │ ensemble_cnn_in[0][0]      │
+├───────────────────────────────┼───────────────────────────┼─────────────────┼────────────────────────────┤
+│ ensemble_concat (Concatenate) │ (None, 12)                │               0 │ sequential[0][0],          │
+│                               │                           │                 │ model_conv1D[0][0]         │
+├───────────────────────────────┼───────────────────────────┼─────────────────┼────────────────────────────┤
+│ ensemble_dropout_1 (Dropout)  │ (None, 12)                │               0 │ ensemble_concat[0][0]      │
+├───────────────────────────────┼───────────────────────────┼─────────────────┼────────────────────────────┤
+│ ensemble_hidden (Dense)       │ (None, 16)                │             208 │ ensemble_dropout_1[0][0]   │
+├───────────────────────────────┼───────────────────────────┼─────────────────┼────────────────────────────┤
+│ ensemble_hidden_act           │ (None, 16)                │               0 │ ensemble_hidden[0][0]      │
+│ (LeakyReLU)                   │                           │                 │                            │
+├───────────────────────────────┼───────────────────────────┼─────────────────┼────────────────────────────┤
+│ ensemble_dropout_2 (Dropout)  │ (None, 16)                │               0 │ ensemble_hidden_act[0][0]  │
+├───────────────────────────────┼───────────────────────────┼─────────────────┼────────────────────────────┤
+│ ensemble_logits (Dense)       │ (None, 6)                 │             102 │ ensemble_dropout_2[0][0]   │
+└───────────────────────────────┴───────────────────────────┴─────────────────┴────────────────────────────┘
+ Total params: 189,607 (740.66 KB)
+ Trainable params: 1,590 (6.21 KB)
+ Non-trainable params: 184,835 (722.01 KB)
+ Optimizer params: 3,182 (12.43 KB)
+
+[MetAnoDe: 16S_2026_04_03: 06:53:06] Loaded validation cache from models/16S_2026_04_03_val_cache.npz: (723222, 380)
+[MetAnoDe: 16S_2026_04_03: 06:53:06] === Sanity-check: branch and ensemble validation metrics ===
+[MetAnoDe: 16S_2026_04_03: 06:55:38] LSTM    -> val_loss=0.1480, val_acc=0.9362
+[MetAnoDe: 16S_2026_04_03: 06:55:52] CNN     -> val_loss=0.3302, val_acc=0.9119
+[MetAnoDe: 16S_2026_04_03: 06:58:34] Ensemble evaluate failed: too many values to unpack (expected 2)
+[MetAnoDe: 16S_2026_04_03: 06:58:34] 
+
+[MetAnoDe: 16S_2026_04_03: 06:58:34] Starting validation prediction: 
+[MetAnoDe: 16S_2026_04_03: 07:04:25] Predictions (validation data) saved to predictions/16S_2026_04_03_Ensemble.validation.csv
+[MetAnoDe: 16S_2026_04_03: 07:04:25]                                                   headers         EN_class         LSTM_class  ...   CNN_chimera CNN_OffTarget-4  CNN_OffTarget-5
+0       art-chim_HM556781.1.1375;tax=d:Bacteria,p:Prot...       EN_chimera       LSTM_chimera  ...  1.000000e+00    1.099810e-32     1.393132e-08
+1                              low-indel_NC_068714.1:96.8   EN_OffTarget-4   LSTM_OffTarget-4  ...  5.470351e-03    7.252254e-01     2.549367e-01
+2       art-indel_JN504778.1.1321;tax=d:Bacteria,p:Pro...        EN_indels        LSTM_indels  ...  1.121039e-44    1.612043e-31     6.074222e-40
+3       art-indel_HM126834.1.1462;tax=d:Bacteria,p:Pro...        EN_indels        LSTM_indels  ...  1.152451e-34    1.758502e-23     1.829251e-30
+4       HQ848097.1.1416;tax=d:Bacteria,p:Firmicutes,o:...      EN_positive      LSTM_positive  ...  1.206099e-06    3.555384e-02     2.545151e-04
+...                                                   ...              ...                ...  ...           ...             ...              ...
+723217  art-chim_DQ824296.1.1398;tax=d:Bacteria,p:Bact...       EN_chimera       LSTM_chimera  ...  9.999996e-01    1.316670e-27     3.657234e-07
+723218                         low-indel_NC_068714.1:96.8   EN_OffTarget-4   LSTM_OffTarget-4  ...  4.434586e-03    7.533022e-01     2.214916e-01
+723219  art-subst_HM557725.1.1376;tax=d:Bacteria,p:Pro...  EN_substitution  LSTM_substitution  ...  2.978197e-12    6.969694e-06     2.134010e-09
+723220  art-subst_HQ763173.1.1442;tax=d:Bacteria,p:Bac...  EN_substitution  LSTM_substitution  ...  1.034127e-11    1.745007e-05     6.762737e-09
+723221  art-subst_DQ513501.1.1351;tax=d:Bacteria,p:Act...  EN_substitution  LSTM_substitution  ...  9.611935e-10    4.467699e-04     4.384037e-07
+
+[723222 rows x 26 columns]
+[MetAnoDe: 16S_2026_04_03: 07:05:24] Predictions (fasta data) saved to predictions/16S_2026_04_03_Ensemble.validation.fasta
+[MetAnoDe: 16S_2026_04_03: 07:05:24] 
+
+[MetAnoDe: 16S_2026_04_03: 07:05:24] Starting query prediction: 
+[MetAnoDe: 16S_2026_04_03: 07:05:24] (241199, 380)
+[MetAnoDe: 16S_2026_04_03: 07:05:25] (241199, 380, 1)
+[MetAnoDe: 16S_2026_04_03: 07:07:08] Predictions (validation data) saved to predictions/16S.silva.trim.derep.16S_2026_04_03_Ensemble.query.csv
+[MetAnoDe: 16S_2026_04_03: 07:07:08] Index(['headers', 'EN_class', 'LSTM_class', 'CNN_class', 'sequences', 'Target',
+       'Target4D', 'sizes', 'EN_positive', 'EN_substitution', 'EN_indels',
+       'EN_chimera', 'EN_OffTarget-4', 'EN_OffTarget-5', 'LSTM_positive',
+       'LSTM_substitution', 'LSTM_indels', 'LSTM_chimera', 'LSTM_OffTarget-4',
+       'LSTM_OffTarget-5', 'CNN_positive', 'CNN_substitution', 'CNN_indels',
+       'CNN_chimera', 'CNN_OffTarget-4', 'CNN_OffTarget-5'],
+      dtype='object')
+[MetAnoDe: 16S_2026_04_03: 07:07:28] Predictions (fasta data) saved to predictions/16S.silva.trim.derep.16S_2026_04_03_Ensemble.query.fasta
