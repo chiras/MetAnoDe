@@ -193,7 +193,7 @@ else:
     loss_func='binary_crossentropy' 
 
 max_epoch = args.epochs
-max_epoch_ensemble=max_epoch
+max_epoch_ensemble=5
 max_epoch_tuner=5
 learning_rate=0.0003
 opt = keras.optimizers.Adam(learning_rate=learning_rate) # ensemble only
@@ -483,7 +483,7 @@ def generate_balanced_dataset(args, balance_4C, labels, verbose=False):
     return X_train_balanced, labels
 
 # load in reference data
-if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, config_exist]):
+if "true" == "true": #not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, config_exist]):
     log(f"\n");log(f"Not all required models and configs are available, regenerating necessary ones")
     log(f"This might take a while, depending on whether models are missing or need to be tuned...")
 
@@ -1004,36 +1004,17 @@ else:
         y_true=y_valid,
         name=project_name
     )
+
     log("E11") if verbose else None
 
-    train_ds_metrics = model_builders.make_ensemble_ds(
-        X_train_padded,
-        y_train,
-        cnn_model=cnn_model,
-        batch_size=16,
-        shuffle=True,
-        seed=SEED
-    )
+    # write one final classification report without re-training
+    metrics_callback.set_model(ensemble)
+    metrics_callback.on_epoch_end(epoch=max_epoch_ensemble, logs=None)
 
-    valid_ds_metrics = model_builders.make_ensemble_ds(
-        X_valid_padded,
-        y_valid,
-        cnn_model=cnn_model,
-        batch_size=16,
-        shuffle=False,
-        seed=SEED
-    )
+if verbose:
+    log("Ensemble architecture:")
+    ensemble.summary(print_fn=log)
 
-    ensemble.fit(
-        train_ds_metrics,
-        epochs=1,
-        validation_data=valid_ds_metrics,
-        callbacks=[metrics_callback],
-        verbose=1
-    )
-
-log(f"Ensemble architecture: ") if verbose else None
-log(ensemble.summary()) if verbose else None
 
 # Try to load cached validation set (works when models are loaded without retraining)
 val_cache_path = f"models/{project_name}_val_cache.npz"
