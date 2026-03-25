@@ -3,7 +3,7 @@
 MetAnoDe employs an alignment-free approach that complements existing tools in cleaning up metabarcoding data. The software makes use of deep-neural networks, more specifically CNNs and LSTMs, as well as an ensemble of both previous models.
 
 Pre-trained models are available for: 
-* Bacterial 16S-V4 matching the target region of Kozich et al. (2014)
+* Bacterial 16S-V4 matching the target region of Kozich et al. (2014) --> ```16S_2026_04_03```
 * Plant ITS2 matching the target region of Sickel et al. (2015)
 
 ## Runtime considerations
@@ -49,7 +49,7 @@ pip install keras==3.3.3
 conda install Numpy=1.23.5
 conda install Pandas=2.2.1
 conda install Scikit-learn=1.4.2
-conda install BioPython=1.84
+conda install conda-forge::BioPython=1.84
 conda install matplotlib=3.8.4
 pip install keras-tuner==1.4.7
 
@@ -67,7 +67,7 @@ docker run --gpus all  -v $PWD:/data --user $(id -u):$(id -g) --rm metanode:tf-2
 # conda option
 python metanode.py -query <query.fasta> -p <model_name>
 ```
-```<model_name``` corresponds to a pretrained model available in the subfolder ```models``` (e.g 16S_2026_3 or ITS2_2026_03).
+```<model_name>``` corresponds to a pretrained model available in the subfolder ```models``` (e.g ```16S_2026_04_03``` or ITS2_2026_03).
 
 Adapter as well as primer sequences however need to be removed from data prior to analysis to match the model, as this varies between different amplicon library generation strategies. 
 
@@ -94,7 +94,7 @@ python metanode.py -query <query.fasta> \
 	-ot <ot1.fasta>,<ot2.fasta>,<ot3.fasta>
 ```
 
-for example, the pretrained ```ITS2_2026_03``` and ```16S_2026_03``` models were generated using (make sure to be in the root dir of the repo): 
+for example, the pretrained ```ITS2_2026_03``` and ```16S_2026_04_03``` models were generated using (make sure to be in the root dir of the repo): 
 ```sh
 docker run --gpus all  \
 	-v $PWD:/data  \
@@ -109,7 +109,7 @@ docker run --gpus all  \
 	--rm metanode:tf-25.01 \
 	-db data/16S.silva.trim.derep.fa \
 	-ot data/16S.mitochondria.trim.1.derep.fasta,data/16S.chloroplast.trim.1.derep.fasta \
-	-p 16S_2026_03 \
+	-p 16S_2026_04_03 \
 	-query data/16S.silva.trim.derep.fa
 
 	
