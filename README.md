@@ -20,10 +20,10 @@ The script supports both GPU (Cuda) and CPU data processing. For data processing
 ## Dependencies
 
 ### Option 1: Use a docker container (recommened)
-Make sure to install AND configure (below) the NVIDIA docker container toolkit
+***Only to enable GPU support:*** *Make sure to install AND configure (below) the NVIDIA docker container toolkit*
 https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html
 
-Then use the ```Dockerfile``` in the ```docker``` subfolder to create an image.
+Use the ```Dockerfile``` in the ```docker``` subfolder to create an image.
 
 ```sh
 # build / rebuild (for including github updates) docker image
@@ -40,6 +40,7 @@ docker run -v $PWD:/data  --user $(id -u):$(id -g) --rm metanode:tf-25.01 -query
 
 
 ### Option 2:  Use a conda environment (not recommended)
+***Only to enable GPU support:*** *Make sure to install AND configure AND test NVIDIA and CUDA properly*
 
 All dependencies need to be installed for proper execution of the code. 
 Here an example to install in a conda environment:
