@@ -2,15 +2,19 @@
 
 MetAnoDe employs an alignment-free approach that complements existing tools in cleaning up metabarcoding data. The software makes use of deep-neural networks, more specifically CNNs and LSTMs, as well as an ensemble of both previous models.
 
+**Citation:** Keller 2025 EcoEvoEXiv https://doi.org/10.32942/X2792N (peer-review version pending)
+
 Pre-trained models are available for: 
-* Bacterial 16S-V4 matching the target region of Kozich et al. (2014) --> ```16S_2026_04_03```
-* Plant ITS2 matching the target region of Sickel et al. (2015) --> ```ITS2_2026_04_01```
+* Bacterial 16S-V4 matching the target region of Kozich et al. (2014, https://doi.org/10.1128/AEM.01043-13) --> ```16S_2026_04_03```
+* Plant ITS2 matching the target region of Sickel et al. (2015, https://doi.org/10.1186/s12898-015-0051-y) --> ```ITS2_2026_04_01```
+
+More models can be trained on demand (see below, or file an issue and tag @chiras)
 
 ## Runtime considerations
 The script supports both GPU (Cuda) and CPU data processing. For data processing with pre-trained models, or such previously self trained, a difference is hardly noticable in relation to general metabarcoding procedures. For training of new models, there are however notable runtime improvements achievable when utilizing GPUs. 
 
 **Recommendation:**
-* **Data processing only:** GPU (Cuda) or CPU viable (1-2 minutes per runtime)
+* **Data processing only:** GPU (Cuda) or CPU viable (1-2 minutes runtime per run)
 * **Training of new marker models:** GPU (Cuda) support strongly recommended (6-7h runtime on GPU, multiple days for CPU only on moderately equipped PC, see below training section for details).
 
 ## Dependencies
