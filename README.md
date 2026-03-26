@@ -126,6 +126,63 @@ The script supports both GPU and CPU processing; however, it is important to not
 
 By default, the software retains all sequences in the query data but annotates them based on their classification from each of the three models in the output. However, an option for sequence removal is also available. The software generates two output files stored in the 'predictions' subfolder: a comma-separated file (CSV) presenting classification results in tabular format, and a second file containing flagged sequences (or a subset if removal is opted) in FASTA format.
 
+### R function to filter data
+```metanode_filter()``` filters a phyloseq object using MetAnoDe anomaly predictions. Taxa predicted as anomalous can be removed either unconditionally or, more conservatively, only if they are both low-prevalence and low-abundance across samples. This approach reduces likely artefacts while minimizing the loss of biologically relevant taxa.
+
+The function:
+* accepts a phyloseq object and a MetAnoDe results table
+* detects whether the OTU/ASV table contains raw counts or relative abundances
+* computes prevalence across samples
+* computes abundance using the median of non-zero values by default
+
+Taxa removal follows these rules:
+* if no thresholds are provided: all taxa flagged as not true are removed
+* if thresholds are used: taxa are removed only if
+	*flagged_as_not_true* AND *low_prevalence* AND/OR *low_abundance*
+
+This conservative logic ensures that taxa are only discarded when they lack both recurrence across samples and meaningful abundance, which is consistent with expectations for sequencing errors and PCR artefacts.
+
+```R
+library(phyloseq)
+source metanode_filter.R
+
+# remove flagged taxa only if both low abundance and low prevalence (recommended)
+ps_filt <- metanode_filter(
+  phyloseq = ps,
+  metanode = meta,
+  abundance_threshold = 0.01,
+  prevalence_threshold = 0.02
+)
+
+# remove flagged taxa only if low abundance
+ps_filt <- metanode_filter(
+  phyloseq = ps,
+  metanode = meta,
+  abundance_threshold = 0.01,
+  prevalence_threshold = NULL
+)
+
+# remove flagged taxa only if low prevalence
+ps_filt <- metanode_filter(
+  phyloseq = ps,
+  metanode = meta,
+  abundance_threshold = NULL,
+  prevalence_threshold = 0.02
+)
+
+# remove all flagged taxa
+ps_filt <- metanode_filter(
+  phyloseq = ps,
+  metanode = meta,
+  abundance_threshold = NULL,
+  prevalence_threshold = NULL
+)
+
+summary_df <- attr(ps_filt, "metanode_filter_summary")
+head(summary_df)
+
+```
+
 ## License
 
 This project provides a derived container based on
