@@ -4,14 +4,14 @@ MetAnoDe employs an alignment-free approach that complements existing tools in c
 
 Pre-trained models are available for: 
 * Bacterial 16S-V4 matching the target region of Kozich et al. (2014) --> ```16S_2026_04_03```
-* Plant ITS2 matching the target region of Sickel et al. (2015)
+* Plant ITS2 matching the target region of Sickel et al. (2015) --> ```ITS2_2026_04_01```
 
 ## Runtime considerations
 The script supports both GPU (Cuda) and CPU data processing. For data processing with pre-trained models, or such previously self trained, a difference is hardly noticable in relation to general metabarcoding procedures. For training of new models, there are however notable runtime improvements achievable when utilizing GPUs. 
 
 **Recommendation:**
-* **Data processing only:** GPU (Cuda) or CPU viable
-* **Training of new marker models:** GPU (Cuda) support strongly recommended.
+* **Data processing only:** GPU (Cuda) or CPU viable (1-2 minutes per runtime)
+* **Training of new marker models:** GPU (Cuda) support strongly recommended (6-7h runtime on GPU, multiple days for CPU only on moderately equipped PC, see below training section for details).
 
 ## Dependencies
 
@@ -67,7 +67,7 @@ docker run --gpus all  -v $PWD:/data --user $(id -u):$(id -g) --rm metanode:tf-2
 # conda option
 python metanode.py -query <query.fasta> -p <model_name>
 ```
-```<model_name>``` corresponds to a pretrained model available in the subfolder ```models``` (e.g ```16S_2026_04_03``` or ITS2_2026_03).
+```<model_name>``` corresponds to a pretrained model available in the subfolder ```models``` (e.g ```16S_2026_04_03``` or ```ITS2_2026_04_01```).
 
 Adapter as well as primer sequences however need to be removed from data prior to analysis to match the model, as this varies between different amplicon library generation strategies. 
 
@@ -94,15 +94,15 @@ python metanode.py -query <query.fasta> \
 	-ot <ot1.fasta>,<ot2.fasta>,<ot3.fasta>
 ```
 
-for example, the pretrained ```ITS2_2026_03``` and ```16S_2026_04_03``` models were generated using (make sure to be in the root dir of the repo): 
+for example, the pretrained ```ITS2_2026_04_01``` and ```16S_2026_04_03``` models were generated using (make sure to be in the root dir of the repo): 
 ```sh
 docker run --gpus all  \
 	-v $PWD:/data  \
 	--rm metanode:tf-25.01 \
 	-db data/ITS2.Quaresma2024.all.trimmedpy2.fasta \
 	-ot data/ITS2.fungi.trim.1.fasta \
-	-p ITS2_2026_03 \
-	-query data/ITS2.Quaresma2024-Sickel2015.fasta
+	-p ITS2_2026_04_01 \
+	-query data/ITS2.Quaresma2024.all.trimmedpy2.fasta
 
 docker run --gpus all  \
 	-v $PWD:/data  \
@@ -116,8 +116,7 @@ docker run --gpus all  \
 ```
 Training of pre-trained models was conducted on Ubuntu 24.04 with GPU support, but have also been tested on Ubuntu 22.04/24.04 with and without GPU support, and MacOSX 12.3 without GPU support. Training of pretrained models were conducted on Intel i7 with 256 GB RAM and 24GB NVIDIA RTX 4090 for ```ITS2_2026``` and AMD Ryzen 7 with 32 GB RAM and 20GB NVIDIA RTX 4070 Ti SUPER for ```16S_2026```.  
 
-The script supports both GPU and CPU processing; however, it is important to note that CPU processing significantly extends the duration of model training. Therefore, for efficient training, GPU utilization is strongly recommended here. There is no strict limit on the number of reference sequences and their lengths or off-target classes that can be incorporated. However, the memory required for encoding and training could potentially be a constraint depending on the available hardware resources.
-
+The script supports both GPU and CPU processing; however, it is important to note that CPU processing significantly extends the duration of model training. Therefore, for efficient training, GPU utilization is strongly recommended here. There is no strict limit on the number of reference sequences and their lengths or off-target classes that can be incorporated. However, the memory required for encoding and training could potentially be a constraint depending on the available hardware resources. On above mentioned hardware, training took 6-7h each model. 
 ## Output
 
 By default, the software retains all sequences in the query data but annotates them based on their classification from each of the three models in the output. However, an option for sequence removal is also available. The software generates two output files stored in the 'predictions' subfolder: a comma-separated file (CSV) presenting classification results in tabular format, and a second file containing flagged sequences (or a subset if removal is opted) in FASTA format.

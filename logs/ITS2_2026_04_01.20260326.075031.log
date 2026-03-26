@@ -1,0 +1,70 @@
+[MetAnoDe: ITS2_2026_04_01: 00:00:01] Random seed: 1774507829
+[MetAnoDe: ITS2_2026_04_01: 00:00:03] Git: 9c0c67c (#82) 9c0c67c9a3a0ceb05df9cf0884e8156b9ea0adbb [/home/ciya/Documents/MetAnoDe]
+[MetAnoDe: ITS2_2026_04_01: 00:00:03] 
+
+[MetAnoDe: ITS2_2026_04_01: 00:00:03] Not all required models and configs are available, regenerating necessary ones
+[MetAnoDe: ITS2_2026_04_01: 00:00:03] This might take a while, depending on whether models are missing or need to be tuned...
+[MetAnoDe: ITS2_2026_04_01: 00:00:06] Estimated target_len from data using median: 333 | mean=333.4, min=150, max=450
+[MetAnoDe: ITS2_2026_04_01: 00:00:06] Length filter applied: kept 190000/197573 (removed 7573) | range [249, 416]
+[MetAnoDe: ITS2_2026_04_01: 00:00:06] 
+
+[MetAnoDe: ITS2_2026_04_01: 00:00:06] Received 190000 original sequences (Class 0) | min=249, max=416, mean=332.3, median=333.0
+[MetAnoDe: ITS2_2026_04_01: 00:00:25] Created 380000 artifical high substitution rate sequences (Class 1) | min=249, max=416, mean=332.3, median=333.0
+[MetAnoDe: ITS2_2026_04_01: 00:00:56] Created 380000 artifical high indel rate sequences (Class 2) | min=235, max=438, mean=332.3, median=332.0
+[MetAnoDe: ITS2_2026_04_01: 00:00:56] Chimera length settings | orig_min=249, orig_max=416, target=333, final_min=166, final_max=500
+[MetAnoDe: ITS2_2026_04_01: 00:00:57] Chimera output stats | generated_min=166, generated_max=500, mean=330, attempts=383268
+[MetAnoDe: ITS2_2026_04_01: 00:00:58] Created 380000 artifical chimeric sequences (Class 3) | min=166, max=500, mean=330.1, median=329.0
+[MetAnoDe: ITS2_2026_04_01: 00:01:02] Created 95000 artifical low substitution sequences (Class 0) | min=249, max=416, mean=332.2, median=332.0
+[MetAnoDe: ITS2_2026_04_01: 00:01:09] Created 95000 artifical low indel sequences (Class 0) | min=246, max=423, mean=332.3, median=332.0
+[MetAnoDe: ITS2_2026_04_01: 00:01:09] Combined Class 0 true + low-error sequences: 380000 | min=246, max=423, mean=332.3, median=332.0
+[MetAnoDe: ITS2_2026_04_01: 00:01:23] Added 380000 (upsampled) Off-target Class 4 (data/ITS2.fungi.trim.1.fasta) | min=119, max=333, mean=203.1, median=209.0
+[MetAnoDe: ITS2_2026_04_01: 00:01:24] Balanced dataset created | total=1900000 | min=119, max=500, mean=306.0, median=318.0
+[MetAnoDe: ITS2_2026_04_01: 00:01:24] Shuffled data with seed 1774507829
+[MetAnoDe: ITS2_2026_04_01: 00:01:25] Split data to train and validation (stratified)
+[MetAnoDe: ITS2_2026_04_01: 00:04:56] Saved new split for project 'ITS2_2026_04_01'
+[MetAnoDe: ITS2_2026_04_01: 00:04:56] Split metadata: {'project_name': 'ITS2_2026_04_01', 'seed': 1774507829, 'test_size': 0.25, 'balance_4C': True, 'loss_func': 'sparse_categorical_crossentropy', 'query_file': 'data/ITS2.Quaresma2024-Sickel2015.fasta', 'true_file': 'data/ITS2.Quaresma2024.all.trimmedpy2.fasta', 'offtargets': 'data/ITS2.fungi.trim.1.fasta', 'n_train': 1425000, 'n_valid': 475000, 'labels': {0: 'positive', 1: 'substitution', 2: 'indels', 3: 'chimera', 4: 'OffTarget-4'}, 'max_len': 500, 'output_dim': 5, 'git_commit_short': '9c0c67c', 'git_commit_full': '9c0c67c9a3a0ceb05df9cf0884e8156b9ea0adbb'}
+[MetAnoDe: ITS2_2026_04_01: 00:04:56] Removed temporary data from memory
+[MetAnoDe: ITS2_2026_04_01: 00:04:56] Encoding data
+[MetAnoDe: ITS2_2026_04_01: 00:06:17] Removed raw sequence lists from memory
+[MetAnoDe: ITS2_2026_04_01: 00:06:17] Padding data
+[MetAnoDe: ITS2_2026_04_01: 00:06:39] Converting data
+[MetAnoDe: ITS2_2026_04_01: 00:06:39] Removed intermediate encoded sequences from memory
+[MetAnoDe: ITS2_2026_04_01: 00:06:58] Saved validation cache to models/ITS2_2026_04_01_val_cache.npz
+[MetAnoDe: ITS2_2026_04_01: 00:06:58] Modeling 5 Classes
+[MetAnoDe: ITS2_2026_04_01: 00:06:58] Class labels: {0: 'positive', 1: 'substitution', 2: 'indels', 3: 'chimera', 4: 'OffTarget-4'}
+[MetAnoDe: ITS2_2026_04_01: 00:06:58] Epochs: 20
+[MetAnoDe: ITS2_2026_04_01: 00:07:01] 
+
+[MetAnoDe: ITS2_2026_04_01: 00:07:01] CNN Model file not found. Creating a new model...
+[MetAnoDe: ITS2_2026_04_01: 00:07:01] Skipping CNN tuner because static hyperparameter override is present.
+[MetAnoDe: ITS2_2026_04_01: 00:22:01] CNN Model completed
+
+[MetAnoDe: ITS2_2026_04_01: 00:22:01] Best epoch: 19
+[MetAnoDe: ITS2_2026_04_01: 00:22:01] CNN Model saved successfully.
+[MetAnoDe: ITS2_2026_04_01: 00:23:04] 
+
+[MetAnoDe: ITS2_2026_04_01: 00:23:04] LSTM Model file not found. Creating a new model...
+[MetAnoDe: ITS2_2026_04_01: 00:23:04] Skipping LSTM tuner because static hyperparameter override is present.
+[MetAnoDe: ITS2_2026_04_01: 03:27:30] Best epoch: 20
+[MetAnoDe: ITS2_2026_04_01: 03:27:30] LSTM Model completed
+
+[MetAnoDe: ITS2_2026_04_01: 03:27:31] Model saved successfully.
+[MetAnoDe: ITS2_2026_04_01: 03:39:01] 
+
+[MetAnoDe: ITS2_2026_04_01: 03:39:01] ENSEMBLE Model not found, creating new.
+[MetAnoDe: ITS2_2026_04_01: 06:01:03] Saving Ensemble
+[MetAnoDe: ITS2_2026_04_01: 06:03:29] Loaded validation cache from models/ITS2_2026_04_01_val_cache.npz: (475000, 500)
+[MetAnoDe: ITS2_2026_04_01: 06:03:29] === Sanity-check: branch and ensemble validation metrics ===
+[MetAnoDe: ITS2_2026_04_01: 06:05:40] LSTM    -> val_loss=0.1188, val_acc=0.9611
+[MetAnoDe: ITS2_2026_04_01: 06:05:49] CNN     -> val_loss=0.2198, val_acc=0.9344
+[MetAnoDe: ITS2_2026_04_01: 06:08:08] Ensemble evaluate failed: too many values to unpack (expected 2)
+[MetAnoDe: ITS2_2026_04_01: 06:08:08] 
+
+[MetAnoDe: ITS2_2026_04_01: 06:08:08] Starting validation prediction: 
+[MetAnoDe: ITS2_2026_04_01: 06:13:05] Predictions (validation data) saved to predictions/ITS2_2026_04_01_Ensemble.validation.csv
+[MetAnoDe: ITS2_2026_04_01: 06:13:39] Predictions (fasta data) saved to predictions/ITS2_2026_04_01_Ensemble.validation.fasta
+[MetAnoDe: ITS2_2026_04_01: 06:13:39] 
+
+[MetAnoDe: ITS2_2026_04_01: 06:13:39] Starting query prediction: 
+[MetAnoDe: ITS2_2026_04_01: 06:14:25] Predictions (validation data) saved to predictions/ITS2.Quaresma2024-Sickel2015.ITS2_2026_04_01_Ensemble.query.csv
+[MetAnoDe: ITS2_2026_04_01: 06:14:31] Predictions (fasta data) saved to predictions/ITS2.Quaresma2024-Sickel2015.ITS2_2026_04_01_Ensemble.query.fasta

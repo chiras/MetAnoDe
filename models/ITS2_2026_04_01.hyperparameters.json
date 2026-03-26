@@ -1,0 +1,13 @@
+{
+  "CNN": {
+    "filters": 64,
+    "dropout": 0.25,
+    "learning_rate": 0.0003
+  },
+  "LSTM": {
+    "embeddim": 128,
+    "units": 64,
+    "dropout": 0.25,
+    "learning_rate": 0.0001
+  }
+}
