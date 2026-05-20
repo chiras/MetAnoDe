@@ -1,4 +1,5 @@
 import os
+import sys
 import argparse
 import time
 import random
@@ -28,6 +29,11 @@ parser.add_argument(
     type=int,
     default=None,
     help="Expected amplicon length. If not set, estimated from data."
+)
+parser.add_argument(
+    "--validate_models",
+    action="store_true",
+    help="Run validation sanity checks on pretrained models"
 )
 
 args = parser.parse_args()
@@ -152,15 +158,30 @@ def write_to_fasta(df: pd.DataFrame, filepath: str) -> None:
             file.write(fasta_header)
             file.write(f"{row['sequences']}\n")
 
-def process_dataframe(df: pd.DataFrame, labels: dict, model: str) -> pd.DataFrame:
-    # Rename the headers 
-    renamed_columns = {col: f"{model}_{labels[col]}" for col in df.columns}
+def process_dataframe(
+    df: pd.DataFrame,
+    labels: dict,
+    model: str
+) -> pd.DataFrame:
+
+    renamed_columns = {}
+
+    for col in df.columns:
+
+        label = labels.get(col, f"unknown_{col}")
+
+        renamed_columns[col] = f"{model}_{label}"
+
     df = df.rename(columns=renamed_columns)
-    
-    # Create a new column "model_class" where the label of the highest value of 0-3 is the column value
+
     label_columns = list(renamed_columns.values())
-    df[f"{model}_class"] = df[label_columns].idxmax(axis=1)
-    
+
+    df[f"{model}_class"] = (
+        df[label_columns]
+        .idxmax(axis=1)
+        .str.replace(f"{model}_", "", regex=False)
+    )
+
     return df
 
 def reorder_columns(df: pd.DataFrame) -> pd.DataFrame:
@@ -219,6 +240,7 @@ else:
 
 #labels = {0: 'positive', 1: 'substitution', 2: 'indels', 3: 'chimera', 4: 'mito', 5 : 'chloro'} # TODO fix in config ###### ---> 16S 
 #labels = {0: 'positive', 1: 'substitution', 2: 'indels', 3: 'chimera', 4: 'fungi'} # TODO fix in config ###### ---> ITS2 
+
 
 
 # check existing models:
@@ -482,10 +504,78 @@ def generate_balanced_dataset(args, balance_4C, labels, verbose=False):
     log(f"Balanced dataset created | total={len(X_train_balanced)} | {length_stats_str(X_train_balanced)}")
     return X_train_balanced, labels
 
+# ------------------------------------------------------------------
+# Expected pretrained files
+# ------------------------------------------------------------------
+
+required_files = [
+    f"models/{args.project_name}_CNN.keras",
+    f"models/{args.project_name}_LSTM.keras",
+    f"models/{args.project_name}_Ensemble.keras",
+    f"models/{args.project_name}_Ensemble.config",
+    f"models/{args.project_name}_Ensemble.token",
+]
+
+missing_files = [f for f in required_files if not os.path.exists(f)]
+
+# ------------------------------------------------------------------
+# Decide whether retraining is necessary
+# ------------------------------------------------------------------
+
+if missing_files:
+    log("")
+    log(f"Missing required model artifacts:")
+    for mf in missing_files:
+        print(f"  - {mf}")
+
+    # --------------------------------------------------------------
+    # No training database supplied -> cannot regenerate
+    # --------------------------------------------------------------
+
+    if args.true_file is None:
+        log("")
+        log("ERROR:")
+        log("Pretrained model appears incomplete, but no training")
+        log("database was supplied via -db.")
+        log("")
+        log("Either:")
+        log("  1) restore/copy the missing pretrained files")
+        log("  2) provide -db and optionally -ot to retrain")
+        log("")
+        sys.exit(1)
+
+    # --------------------------------------------------------------
+    # Retraining mode
+    # --------------------------------------------------------------
+    log("")
+    log("Not all required models/configs available.")
+    log("Regenerating missing components...")
+    log("")
+    regenerate_models = True
+
+else:
+    regenerate_models = False
+    log("")
+    log(f"Using pretrained model: {args.project_name}")
+    metadata = helper.load_model_metadata(project_name)
+    labels = metadata["labels"]
+    log(f"Classes: {labels}")
+
+
 # load in reference data
-if "true" == "true": #not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, config_exist]):
-    log(f"\n");log(f"Not all required models and configs are available, regenerating necessary ones")
+#if "true" == "true": #not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, config_exist]):
+if regenerate_models:
     log(f"This might take a while, depending on whether models are missing or need to be tuned...")
+
+    labels = helper.build_labels_from_args(args)
+
+    helper.save_model_metadata(
+        project_name=project_name,
+        labels=labels,
+        extra_metadata={
+            "offtargets": args.offtargets.split(",") if args.offtargets else []
+        }
+    )
 
     SPLIT_DIR = "splits"
     config = {}
@@ -1015,57 +1105,59 @@ if verbose:
     log("Ensemble architecture:")
     ensemble.summary(print_fn=log)
 
+helper.validate_model_classes(ensemble, metadata)
 
-# Try to load cached validation set (works when models are loaded without retraining)
-val_cache_path = f"models/{project_name}_val_cache.npz"
-VAL = None
-if os.path.isfile(val_cache_path):
-    try:
-        _cache = np.load(val_cache_path, allow_pickle=False)
-        X_valid_lstm = _cache["X_valid_padded"].astype("int32")      # (N, T)
-        y_valid_cached = _cache["y_valid"]
-        X_valid_cnn = model_builders.make_cnn_view_np(X_valid_lstm, cnn_model)
-        VAL = (X_valid_lstm, X_valid_cnn, y_valid_cached)
-        log(f"Loaded validation cache from {val_cache_path}: {X_valid_lstm.shape}")
-    except Exception as e:
-        log(f"Warning: could not load validation cache ({e})")
+if args.validate_models:
+    # Try to load cached validation set (works when models are loaded without retraining)
+    val_cache_path = f"models/{project_name}_val_cache.npz"
+    VAL = None
+    if os.path.isfile(val_cache_path):
+        try:
+            _cache = np.load(val_cache_path, allow_pickle=False)
+            X_valid_lstm = _cache["X_valid_padded"].astype("int32")      # (N, T)
+            y_valid_cached = _cache["y_valid"]
+            X_valid_cnn = model_builders.make_cnn_view_np(X_valid_lstm, cnn_model)
+            VAL = (X_valid_lstm, X_valid_cnn, y_valid_cached)
+            log(f"Loaded validation cache from {val_cache_path}: {X_valid_lstm.shape}")
+        except Exception as e:
+            log(f"Warning: could not load validation cache ({e})")
 
-# ---- Sanity-check branch + ensemble metrics (only if we have VAL) ----
-if VAL is not None:
-    log("=== Sanity-check: branch and ensemble validation metrics ===")
-    X_valid_lstm, X_valid_cnn, y_valid_cached = VAL
+    # ---- Sanity-check branch + ensemble metrics (only if we have VAL) ----
+    if VAL is not None:
+        log("=== Sanity-check: branch and ensemble validation metrics ===")
+        X_valid_lstm, X_valid_cnn, y_valid_cached = VAL
 
-    # 1) LSTM solo
-    try:
-        lstm_loss, lstm_acc = lstm_model.evaluate(X_valid_lstm, y_valid_cached, verbose=0)
-        log(f"LSTM    -> val_loss={lstm_loss:.4f}, val_acc={lstm_acc:.4f}")
-    except Exception as e:
-        log(f"LSTM evaluate failed: {e}")
+        # 1) LSTM solo
+        try:
+            lstm_loss, lstm_acc = lstm_model.evaluate(X_valid_lstm, y_valid_cached, verbose=0)
+            log(f"LSTM    -> val_loss={lstm_loss:.4f}, val_acc={lstm_acc:.4f}")
+        except Exception as e:
+            log(f"LSTM evaluate failed: {e}")
 
-    # 2) CNN solo
-    try:
-        cnn_loss, cnn_acc = cnn_model.evaluate(X_valid_cnn, y_valid_cached, verbose=0)
-        log(f"CNN     -> val_loss={cnn_loss:.4f}, val_acc={cnn_acc:.4f}")
-    except Exception as e:
-        log(f"CNN evaluate failed: {e}")
+        # 2) CNN solo
+        try:
+            cnn_loss, cnn_acc = cnn_model.evaluate(X_valid_cnn, y_valid_cached, verbose=0)
+            log(f"CNN     -> val_loss={cnn_loss:.4f}, val_acc={cnn_acc:.4f}")
+        except Exception as e:
+            log(f"CNN evaluate failed: {e}")
 
-    # 3) Ensemble (two inputs)
-    try:
-        ens_loss, ens_acc = ensemble.evaluate(
-            {
-                "ensemble_lstm_in": X_valid_lstm,
-                "ensemble_cnn_in": X_valid_cnn
-            },
-            y_valid_cached,
-            verbose=0
-        )
-        log(f"Ensemble-> val_loss={ens_loss:.4f}, val_acc={ens_acc:.4f}")
-        best_single_acc = max(locals().get("lstm_acc", 0.0), locals().get("cnn_acc", 0.0))
-        log(f"Ensemble gain over best single: {ens_acc - best_single_acc:+.4f}")
-    except Exception as e:
-        log(f"Ensemble evaluate failed: {e}")
-else:
-    log("No validation cache found; skipping sanity-check metrics.")
+        # 3) Ensemble (two inputs)
+        try:
+            ens_loss, ens_acc = ensemble.evaluate(
+                {
+                    "ensemble_lstm_in": X_valid_lstm,
+                    "ensemble_cnn_in": X_valid_cnn
+                },
+                y_valid_cached,
+                verbose=0
+            )
+            log(f"Ensemble-> val_loss={ens_loss:.4f}, val_acc={ens_acc:.4f}")
+            best_single_acc = max(locals().get("lstm_acc", 0.0), locals().get("cnn_acc", 0.0))
+            log(f"Ensemble gain over best single: {ens_acc - best_single_acc:+.4f}")
+        except Exception as e:
+            log(f"Ensemble evaluate failed: {e}")
+    else:
+        log("No validation cache found; skipping sanity-check metrics.")
 
 # predictions validation
 

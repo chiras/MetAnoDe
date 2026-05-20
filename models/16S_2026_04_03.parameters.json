@@ -1,0 +1,16 @@
+{
+  "labels": {
+    "0": "true",
+    "1": "substitution",
+    "2": "indel",
+    "3": "chimera",
+    "4": "mitochondria",
+    "5": "chloroplast"
+  },
+  "n_classes": 6,
+  "core_classes": 4,
+  "off_target_classes": [
+    "mitochondria",
+    "chloroplast"
+  ]
+}

@@ -10,6 +10,111 @@ import json
 os.makedirs("plots", exist_ok=True)
 os.makedirs("predictions", exist_ok=True)
 
+def build_labels_from_args(args):
+    """
+    Build dynamic class labels.
+
+    Fixed classes:
+        0 = true
+        1 = substitution
+        2 = indel
+        3 = chimera
+
+    Dynamic classes:
+        4+ = off-target references from -ot
+    """
+
+    labels = {
+        0: "true",
+        1: "substitution",
+        2: "indel",
+        3: "chimera"
+    }
+
+    # parser uses dest='offtargets'
+    if getattr(args, "offtargets", None):
+
+        ot_files = args.offtargets.split(",")
+
+        for i, ot_path in enumerate(ot_files):
+
+            class_id = 4 + i
+
+            label = os.path.basename(ot_path)
+            label = os.path.splitext(label)[0]
+
+            # cleanup common suffixes/prefixes
+            cleanup_tokens = [
+                ".trim",
+                ".derep",
+                ".fasta",
+                ".fa"
+            ]
+
+            for token in cleanup_tokens:
+                label = label.replace(token, "")
+
+            labels[class_id] = label
+
+    return labels
+
+def validate_model_classes(model, metadata):
+
+    n_model = model.output_shape[-1]
+    n_meta = metadata["n_classes"]
+
+    if n_model != n_meta:
+
+        raise RuntimeError(
+            f"Class mismatch:\n"
+            f"Model outputs {n_model} classes\n"
+            f"Metadata defines {n_meta} classes"
+        )
+    
+def save_model_metadata(
+    project_name: str,
+    labels: dict,
+    extra_metadata: dict = None
+):
+
+    metadata = {
+        "labels": {str(k): v for k, v in labels.items()},
+        "n_classes": len(labels)
+    }
+
+    if extra_metadata is not None:
+        metadata.update(extra_metadata)
+
+    out_path = f"models/{project_name}.parameters.json"
+
+    with open(out_path, "w") as f:
+        json.dump(metadata, f, indent=4)
+
+    print(f"[MetAnoDe] Saved metadata: {out_path}")
+
+def load_model_metadata(project_name: str) -> dict:
+    """
+    Load model metadata from JSON.
+    """
+
+    path = f"models/{project_name}.parameters.json"
+
+    if not os.path.isfile(path):
+        raise FileNotFoundError(
+            f"Metadata file not found: {path}"
+        )
+
+    with open(path, "r") as f:
+        metadata = json.load(f)
+
+    # convert label keys back to int
+    metadata["labels"] = {
+        int(k): v
+        for k, v in metadata["labels"].items()
+    }
+
+    return metadata
+
 def load_hp_override(json_path, model_label):
     """
     Load static hyperparameters from JSON if present.
@@ -174,8 +279,6 @@ def save_summary(model, history, best_hps, model_name):
                     f"Val Loss: {history.history['val_loss'][epoch]}\n")
             
 
-import random
-import pandas as pd
 
 def create_artificial_chimera(
     df,
