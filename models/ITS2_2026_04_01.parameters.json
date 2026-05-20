@@ -1,0 +1,14 @@
+{
+  "labels": {
+    "0": "true",
+    "1": "substitution",
+    "2": "indel",
+    "3": "chimera",
+    "4": "fungi"
+  },
+  "n_classes": 5,
+  "core_classes": 4,
+  "off_target_classes": [
+    "fungi"
+  ]
+}
