@@ -1204,45 +1204,231 @@ if not all([model_exist_en, model_exist_cnn, model_exist_lstm, token_exist, conf
     write_to_fasta(merged_df, output_path)
     log(f"Predictions (fasta data) saved to {output_path}")
 
+####################################################################
+####################################################################
+# ------------------------------------------------------------------
+# Predict query sequences
+# ------------------------------------------------------------------
 
-# predictions query data
+log("")
+log("==============================================================")
+log("Starting query prediction")
+log("==============================================================")
 
-log(f"\n");log(f"Starting query prediction: ")
+log(f"Query dataset: {query_name}")
+log(f"Model: {model_name}")
+log(f"Number of query sequences: {len(X_query_padded):,}")
 
-log(X_query_padded.shape) if verbose else None
-X_query_cnn = model_builders.make_cnn_view_np(X_query_padded, cnn_model)
-log(X_query_cnn.shape) if verbose else None
+# ------------------------------------------------------------------
+# Prepare CNN-compatible representation
+# ------------------------------------------------------------------
 
-predictions = ensemble.predict({
-    "ensemble_lstm_in": X_query_padded,
-    "ensemble_cnn_in": X_query_cnn
-})
+log("")
+log("Preparing CNN representation")
+
+if verbose:
+    log(f"LSTM input shape: {X_query_padded.shape}")
+
+X_query_cnn = model_builders.make_cnn_view_np(
+    X_query_padded,
+    cnn_model
+)
+
+if verbose:
+    log(f"CNN input shape: {X_query_cnn.shape}")
+
+# ------------------------------------------------------------------
+# Ensemble prediction
+# ------------------------------------------------------------------
+
+log("")
+log("Running ensemble prediction")
+
+predictions = ensemble.predict(
+    {
+        "ensemble_lstm_in": X_query_padded,
+        "ensemble_cnn_in": X_query_cnn
+    },
+    verbose=1
+)
+
+log(f"Ensemble prediction completed")
+log(f"Prediction matrix shape: {predictions.shape}")
 
 predictions_df = pd.DataFrame(predictions)
-predictions_df = process_dataframe(predictions_df, labels, "EN")
 
-predictions_lstm = lstm_model.predict(X_query_padded)
+predictions_df = process_dataframe(
+    predictions_df,
+    labels,
+    "EN"
+)
+
+# ------------------------------------------------------------------
+# LSTM branch prediction
+# ------------------------------------------------------------------
+
+log("")
+log("Running LSTM branch prediction")
+
+predictions_lstm = lstm_model.predict(
+    X_query_padded,
+    verbose=1
+)
+
+log(f"LSTM prediction matrix shape: {predictions_lstm.shape}")
+
 predictions_df_lstm = pd.DataFrame(predictions_lstm)
-predictions_df_lstm = process_dataframe(predictions_df_lstm, labels, "LSTM")
 
-predictions_cnn = cnn_model.predict(X_query_cnn)
+predictions_df_lstm = process_dataframe(
+    predictions_df_lstm,
+    labels,
+    "LSTM"
+)
+
+# ------------------------------------------------------------------
+# CNN branch prediction
+# ------------------------------------------------------------------
+
+log("")
+log("Running CNN branch prediction")
+
+predictions_cnn = cnn_model.predict(
+    X_query_cnn,
+    verbose=1
+)
+
+log(f"CNN prediction matrix shape: {predictions_cnn.shape}")
+
 predictions_df_cnn = pd.DataFrame(predictions_cnn)
-predictions_df_cnn = process_dataframe(predictions_df_cnn, labels, "CNN")
+
+predictions_df_cnn = process_dataframe(
+    predictions_df_cnn,
+    labels,
+    "CNN"
+)
+
+# ------------------------------------------------------------------
+# Merge metadata and predictions
+# ------------------------------------------------------------------
+
+log("")
+log("Merging prediction outputs")
 
 sequences_dict_query.reset_index(drop=True, inplace=True)
 predictions_df.reset_index(drop=True, inplace=True)
 predictions_df_lstm.reset_index(drop=True, inplace=True)
 predictions_df_cnn.reset_index(drop=True, inplace=True)
 
-merged_df = pd.concat([sequences_dict_query, predictions_df,predictions_df_lstm,predictions_df_cnn], axis=1)
+merged_df = pd.concat(
+    [
+        sequences_dict_query,
+        predictions_df,
+        predictions_df_lstm,
+        predictions_df_cnn
+    ],
+    axis=1
+)
+
 merged_df = reorder_columns(merged_df)
 
-output_path = f"predictions/{query_name}.{model_name}.query.csv"
-merged_df.to_csv(output_path, index=False)
-log(f"Predictions (validation data) saved to {output_path}")
+log(f"Merged dataframe shape: {merged_df.shape}")
 
-log(merged_df.columns) if verbose else None
+if verbose:
+    log(f"Final columns:\n{list(merged_df.columns)}")
 
-output_path = f"predictions/{query_name}.{model_name}.query.fasta"
-write_to_fasta(merged_df, output_path)
-log(f"Predictions (fasta data) saved to {output_path}")
+# ------------------------------------------------------------------
+# Format prediction probabilities for readable export
+# ------------------------------------------------------------------
+
+prediction_prefixes = (
+    "EN_",
+    "LSTM_",
+    "CNN_"
+)
+
+prediction_columns = [
+    col
+    for col in merged_df.columns
+    if (
+        col.startswith(prediction_prefixes)
+        and not col.endswith("_class")
+    )
+]
+
+merged_df[prediction_columns] = (
+    merged_df[prediction_columns]
+    .astype(float)
+    .round(6)
+)
+
+# optional: suppress tiny floating point noise
+merged_df[prediction_columns] = (
+    merged_df[prediction_columns]
+    .mask(
+        merged_df[prediction_columns] < 1e-6,
+        0
+    )
+)
+
+# ------------------------------------------------------------------
+# Save CSV output
+# ------------------------------------------------------------------
+
+csv_output_path = (
+    f"predictions/{query_name}.{model_name}.query.csv"
+)
+
+merged_df.to_csv(
+    csv_output_path,
+    index=False,
+    float_format="%.6f"
+)
+
+log("")
+log(f"Prediction table saved:")
+log(f"  {csv_output_path}")
+
+# ------------------------------------------------------------------
+# Save FASTA output
+# ------------------------------------------------------------------
+
+fasta_output_path = (
+    f"predictions/{query_name}.{model_name}.query.fasta"
+)
+
+write_to_fasta(
+    merged_df,
+    fasta_output_path
+)
+
+log(f"Prediction FASTA saved:")
+log(f"  {fasta_output_path}")
+
+# ------------------------------------------------------------------
+# Summary statistics
+# ------------------------------------------------------------------
+
+log("")
+log("Prediction summary")
+
+if "EN_class" in merged_df.columns:
+
+    class_counts = (
+        merged_df["EN_class"]
+        .value_counts(dropna=False)
+        .sort_index()
+    )
+
+    for cls, count in class_counts.items():
+
+        fraction = count / len(merged_df)
+
+        log(
+            f"  {cls:<20} "
+            f"{count:>8,} "
+            f"({fraction:.2%})"
+        )
+
+log("")
+log("Query prediction finished successfully")
+log("==============================================================")

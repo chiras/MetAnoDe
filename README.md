@@ -122,6 +122,24 @@ docker run --gpus all  \
 Training of pre-trained models was conducted on Ubuntu 24.04 with GPU support, but have also been tested on Ubuntu 22.04/24.04 with and without GPU support, and MacOSX 12.3 without GPU support. Training of pretrained models were conducted on Intel i7 with 256 GB RAM and 24GB NVIDIA RTX 4090 for ```ITS2_2026``` and AMD Ryzen 7 with 32 GB RAM and 20GB NVIDIA RTX 4070 Ti SUPER for ```16S_2026```.  
 
 The script supports both GPU and CPU processing; however, it is important to note that CPU processing significantly extends the duration of model training. Therefore, for efficient training, GPU utilization is strongly recommended here. There is no strict limit on the number of reference sequences and their lengths or off-target classes that can be incorporated. However, the memory required for encoding and training could potentially be a constraint depending on the available hardware resources. On above mentioned hardware, training took 6-7h each model. 
+
+## All command-line parameters
+
+| Parameter | For prediction | For modelling | Argument | Default | Description |
+|---|---:|---:|---|---|---|
+| `-query` | Required | Required | `<query.fasta>` | none | Query FASTA file containing amplicon sequences to be classified. |
+| `-p` | Required | Required | `<model_name>` | none | Project or model name. Used to load existing models or to name newly trained models and associated output files. |
+| `-db` | No | Required | `<ref.fasta>` | none | True target amplicon reference database in FASTA format. Required when training a new model. |
+| `-ot` | No | Optional | `<ot1.fasta>,<ot2.fasta>,...` | none | Comma-separated list of known off-target amplicon FASTA files. Each file is treated as a separate off-target class during model training. |
+| `-2c` | No | Optional | none | `FALSE` | Switch from multiclass to binary classification. Deprecated. |
+| `-r` | No | Optional | none | `FALSE` | Recalibrate models by rerunning tuner-based hyperparameter optimization. |
+| `-e` | No | Optional | `<integer>` | `20` | Number of training epochs. |
+| `-v` | Optional | Optional | none | `FALSE` | Enable verbose mode. |
+| `-t` | Optional | Optional | `<integer>` | none | Number of processing threads. |
+| `-seed` | Optional | Optional | `<integer>` | none | Seed for randomization and reproducibility. |
+| `--target_len` | Optional | Optional | `<integer>` | estimated from data | Expected amplicon length. If not provided, the length is estimated from the input data. |
+| `--validate_models` | Optional | No | none | `FALSE` | Run validation sanity checks on pretrained models before prediction. |
+
 ## Output
 
 By default, the software retains all sequences in the query data but annotates them based on their classification from each of the three models in the output. However, an option for sequence removal is also available. The software generates two output files stored in the 'predictions' subfolder: a comma-separated file (CSV) presenting classification results in tabular format, and a second file containing flagged sequences (or a subset if removal is opted) in FASTA format.
@@ -182,7 +200,6 @@ summary_df <- attr(ps_filt, "metanode_filter_summary")
 head(summary_df)
 
 ```
-
 ## License
 
 This project provides a derived container based on
