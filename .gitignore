@@ -2,7 +2,6 @@
 .DS_Store
 tuner
 splits
-models
 logs
 predictions
 plots
