@@ -1,0 +1,35 @@
+{
+  "model_id": "plant_ITS2_m1.4",
+  "model_version": "1.4",
+  "date": "2026-09-09",
+  "description": "Pretrained MetAnoDe model for plant ITS2 amplicon metabarcoding sequences.",
+
+  "target_group": "Plants",
+  "marker": "ITS2",
+  "region": "ITS2",
+
+  "forward_primer_name": null,
+  "forward_primer": null,
+  "reverse_primer_name": null,
+  "reverse_primer": null,
+
+  "preprocessing": {
+    "primers_removed": true,
+    "reverse_complement": false
+  },
+
+  "reference_database": null,
+
+  "labels": {
+    "0": "true",
+    "1": "substitution",
+    "2": "indel",
+    "3": "chimera",
+    "4": "fungi"
+  },
+  "n_classes": 5,
+  "core_classes": 4,
+  "off_target_classes": [
+    "fungi"
+  ]
+}

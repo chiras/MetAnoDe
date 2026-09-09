@@ -1,0 +1,35 @@
+{
+  "model_id": "fungal_ITS2_m1.1",
+  "model_version": "1.1",
+  "date": "2026-09-09",
+  "description": "Amplicons generated from the fungal ITS2 region using primers gITS7 and ITS4. This model is trained on fungal sequences and can classify sequences into true, substitution, indel, chimera, and plant_ITS2 classes.",
+
+  "target_group": "Fungi",
+  "marker": "ITS2",
+  "region": "gITS7-ITS4",
+
+  "forward_primer_name": "gITS7",
+  "forward_primer": "GTGARTCATCGARTCTTTG",
+  "reverse_primer_name": "ITS4",
+  "reverse_primer": "TCCTCCGCTTATTGATATGC",
+
+  "preprocessing": {
+    "primers_removed": true,
+    "reverse_complement": false
+  },
+
+  "reference_database": "UNITE v10.0, 2025-02-19",
+
+  "labels": {
+    "0": "true",
+    "1": "substitution",
+    "2": "indel",
+    "3": "chimera",
+    "4": "plant_ITS2"
+  },
+  "n_classes": 5,
+  "core_classes": 4,
+  "off_target_classes": [
+    "plant_ITS2"
+  ]
+}
