@@ -583,6 +583,8 @@ if regenerate_models:
         }
     )
 
+    metadata = helper.load_model_metadata(project_name)
+    
     SPLIT_DIR = "splits"
     config = {}
     if helper.split_files_exist(project_name, SPLIT_DIR):
