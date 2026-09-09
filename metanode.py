@@ -37,7 +37,9 @@ parser.add_argument(
 )
 
 args = parser.parse_args()
-project_name=args.project_name 
+project_name=args.project_name
+model_dir = os.path.join("models", project_name)
+plots_dir = os.path.join(model_dir, "plots")
 
 # Silence TF/absl startup noise , settings for training consistencies
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")   # TF C++ logs
@@ -245,18 +247,19 @@ else:
 
 # check existing models:
 
-model_name_en= f"{project_name}_Ensemble"
-model_path_en = f"models/{model_name_en}.keras"
-model_name_cnn= f"{project_name}_CNN"
-model_path_cnn = f"models/{model_name_cnn}.keras"
-model_name_lstm= f"{project_name}_LSTM"
-model_path_lstm = f"models/{model_name_lstm}.keras"
-token_path = f"models/{model_name_en}.token"
-config_path = f"models/{model_name_en}.config"
+model_name_en = f"{project_name}_Ensemble"
+model_name_cnn = f"{project_name}_CNN"
+model_name_lstm = f"{project_name}_LSTM"
 
-hp_override_path = f"models/{project_name}.hyperparameters.json"
-hp_override_cnn_path = f"models/{project_name}_CNN.hyperparameters.json"
-hp_override_lstm_path = f"models/{project_name}_LSTM.hyperparameters.json"
+model_path_en = os.path.join(model_dir, "Ensemble.keras")
+model_path_cnn = os.path.join(model_dir, "CNN.keras")
+model_path_lstm = os.path.join(model_dir, "LSTM.keras")
+token_path = os.path.join(model_dir, "Ensemble.token")
+config_path = os.path.join(model_dir, "Ensemble.config")
+
+hp_override_path = os.path.join(model_dir, "hyperparameters.json")
+hp_override_cnn_path = os.path.join(model_dir, "CNN.hyperparameters.json")
+hp_override_lstm_path = os.path.join(model_dir, "LSTM.hyperparameters.json")
 
 model_exist_en = os.path.isfile(model_path_en)
 model_exist_cnn = os.path.isfile(model_path_cnn)
@@ -509,11 +512,12 @@ def generate_balanced_dataset(args, balance_4C, labels, verbose=False):
 # ------------------------------------------------------------------
 
 required_files = [
-    f"models/{args.project_name}_CNN.keras",
-    f"models/{args.project_name}_LSTM.keras",
-    f"models/{args.project_name}_Ensemble.keras",
-    f"models/{args.project_name}_Ensemble.config",
-    f"models/{args.project_name}_Ensemble.token",
+    os.path.join(model_dir, "CNN.keras"),
+    os.path.join(model_dir, "LSTM.keras"),
+    os.path.join(model_dir, "Ensemble.keras"),
+    os.path.join(model_dir, "Ensemble.config"),
+    os.path.join(model_dir, "Ensemble.token"),
+    os.path.join(model_dir, "parameters.json"),
 ]
 
 missing_files = [f for f in required_files if not os.path.exists(f)]
@@ -551,6 +555,8 @@ if missing_files:
     log("Not all required models/configs available.")
     log("Regenerating missing components...")
     log("")
+    os.makedirs(model_dir, exist_ok=True)
+    os.makedirs(plots_dir, exist_ok=True)
     regenerate_models = True
 
 else:
@@ -740,7 +746,7 @@ if regenerate_models:
             config = pickle.load(file)
 
     # --- Save a small validation cache for future loaded-model runs ---
-    val_cache_path = f"models/{project_name}_val_cache.npz"
+    val_cache_path = os.path.join(model_dir, "val_cache.npz")
     try:
         # keep it compact (optionally subsample)
         np.savez_compressed(
@@ -795,8 +801,8 @@ X_query_padded = np.array(X_query_encoded)
 
 
 model_name= f"{project_name}_CNN"
-model_path = f"models/{model_name}.keras"
-summary_path = f"models/{project_name}_Stats.txt"
+model_path = os.path.join(model_dir, "CNN.keras")
+summary_path = os.path.join(model_dir, "Stats.txt")
 
 if model_exist_cnn:
     # Try to load the saved model
@@ -815,7 +821,7 @@ else:
     metrics_callback = model_builders.MetricsCallback(
         test_data=X_valid_padded,
         y_true=y_valid,
-        name=project_name
+        summary_path=summary_path
     )
 
     # try model-specific override first, then shared file
@@ -869,8 +875,8 @@ else:
     cnn_model.save(model_path)
     log("CNN Model saved successfully.")
 
-    helper.plot_history(cnn_history, model_name, best_hps.values)
-    helper.save_summary(cnn_model, cnn_history, best_hps, model_name)
+    helper.plot_history(cnn_history, model_dir, "CNN", best_hps.values)
+    helper.save_summary(cnn_model, cnn_history, best_hps, model_dir, "CNN")
 
     with open(summary_path, 'a') as f:
         f.write('##### CNN #####:\n')
@@ -889,7 +895,7 @@ log(f"CNN architecture: ") if verbose else None
 log(cnn_model.summary()) if verbose else None
 
 model_name= f"{project_name}_LSTM"
-model_path = f"models/{model_name}.keras"
+model_path = os.path.join(model_dir, "LSTM.keras")
 
 if model_exist_lstm:
     # Try to load the saved model
@@ -907,7 +913,7 @@ else:
     metrics_callback = model_builders.MetricsCallback(
         test_data=X_valid_padded,
         y_true=y_valid,
-        name=project_name
+        summary_path=summary_path
     )
 
     # try model-specific override first, then shared file
@@ -961,8 +967,8 @@ else:
     lstm_model.save(model_path)
     log("Model saved successfully.")
 
-    helper.plot_history(lstm_history, model_name, best_hps.values)
-    helper.save_summary(lstm_model, lstm_history, best_hps, model_name)
+    helper.plot_history(lstm_history, model_dir, "LSTM", best_hps.values)
+    helper.save_summary(lstm_model, lstm_history, best_hps, model_dir, "LSTM")
 
     with open(summary_path, 'a') as f:
         f.write('\n\n##### LSTM #####:\n')
@@ -986,7 +992,7 @@ if shuffle_validation:
 
 # model stacking
 model_name= f"{project_name}_Ensemble"
-model_path = f"models/{model_name}.keras"
+model_path = os.path.join(model_dir, "Ensemble.keras")
 
 if model_exist_en:
     # Try to load the saved model
@@ -1028,7 +1034,7 @@ else:
     optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
     callbacks = [
         keras.callbacks.ModelCheckpoint(
-            filepath=f"models/{project_name}_Ensemble.best.keras",
+            filepath=os.path.join(model_dir, "Ensemble.best.keras"),
             monitor="val_accuracy", mode="max", save_best_only=True
         ),
         keras.callbacks.EarlyStopping(
@@ -1077,7 +1083,7 @@ else:
     log("E10") if verbose else None
 
     # Plot training history
-    helper.plot_history(history, model_name, "ensemble")
+    helper.plot_history(history, model_dir, "Ensemble", "ensemble")
     
     # Write summary section
     ensemble.save(model_path)
@@ -1092,7 +1098,7 @@ else:
     metrics_callback = model_builders.MetricsCallback(
         test_data=[X_valid_padded, X_valid_cnn_for_metrics],
         y_true=y_valid,
-        name=project_name
+        summary_path=summary_path
     )
 
     log("E11") if verbose else None
@@ -1109,7 +1115,7 @@ helper.validate_model_classes(ensemble, metadata)
 
 if args.validate_models:
     # Try to load cached validation set (works when models are loaded without retraining)
-    val_cache_path = f"models/{project_name}_val_cache.npz"
+    val_cache_path = os.path.join(model_dir, "val_cache.npz")
     VAL = None
     if os.path.isfile(val_cache_path):
         try:

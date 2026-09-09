@@ -7,7 +7,6 @@ import re
 import os
 import json
 
-os.makedirs("plots", exist_ok=True)
 os.makedirs("predictions", exist_ok=True)
 
 def build_labels_from_args(args):
@@ -85,7 +84,9 @@ def save_model_metadata(
     if extra_metadata is not None:
         metadata.update(extra_metadata)
 
-    out_path = f"models/{project_name}.parameters.json"
+    model_dir = os.path.join("models", project_name)
+    os.makedirs(model_dir, exist_ok=True)
+    out_path = os.path.join(model_dir, "parameters.json")
 
     with open(out_path, "w") as f:
         json.dump(metadata, f, indent=4)
@@ -97,7 +98,7 @@ def load_model_metadata(project_name: str) -> dict:
     Load model metadata from JSON.
     """
 
-    path = f"models/{project_name}.parameters.json"
+    path = os.path.join("models", project_name, "parameters.json")
 
     if not os.path.isfile(path):
         raise FileNotFoundError(
@@ -212,7 +213,7 @@ def read_fasta(file_path, target, target2):
     sequences_dict = pd.DataFrame(sequences_dict)
     return sequences_dict
 
-def plot_history(history, model_name, values):
+def plot_history(history, model_dir, model_component, values):
     if values != "ensemble":
         values_string = "\n".join(["=".join([key, str(val)]) for key, val in values.items()])
     else:
@@ -231,7 +232,7 @@ def plot_history(history, model_name, values):
     plt.subplot(1, 2, 1)
     plt.plot(epochs, loss, 'bo', label='Training loss')
     plt.plot(epochs, val_loss, 'b', label='Validation loss')
-    plt.title(model_name)
+    plt.title(model_component)
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
     plt.legend()
@@ -239,7 +240,7 @@ def plot_history(history, model_name, values):
     plt.subplot(1, 2, 2)
     plt.plot(epochs, accuracy, 'ro', label='Training accuracy')
     plt.plot(epochs, val_accuracy, 'r', label='Validation accuracy')
-    plt.title(model_name)
+    plt.title(model_component)
     plt.xlabel('Epochs')
     plt.ylabel('Accuracy')
     plt.legend()
@@ -247,10 +248,12 @@ def plot_history(history, model_name, values):
     plt.tight_layout()
 
     # Saving the plot as a PDF file
-    plt.savefig(f'plots/{model_name}.training_validation.pdf')
+    plots_dir = os.path.join(model_dir, 'plots')
+    os.makedirs(plots_dir, exist_ok=True)
+    plt.savefig(os.path.join(plots_dir, f'{model_component}.training_validation.pdf'))
     plt.close()
 
-def save_summary(model, history, best_hps, model_name): 
+def save_summary(model, history, best_hps, model_dir, model_component): 
     # Summarize the model
     model_summary = []
     model.summary(print_fn=lambda x: model_summary.append(x))
@@ -261,7 +264,8 @@ def save_summary(model, history, best_hps, model_name):
     best_epoch = val_acc_per_epoch.index(max(val_acc_per_epoch)) + 1
 
     # Save the summary, hyperparameters, and metrics
-    summary_path = f"models/{model_name}.txt"
+    os.makedirs(model_dir, exist_ok=True)
+    summary_path = os.path.join(model_dir, f"{model_component}.txt")
 
     with open(summary_path, 'w') as f:
         f.write('Model Summary:\n')

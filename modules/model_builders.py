@@ -10,12 +10,13 @@ import tensorflow as tf
 from keras.callbacks import Callback
 from sklearn.metrics import classification_report
 import numpy as np
+import os
 
 class MetricsCallback(Callback):
-    def __init__(self, test_data, y_true, name):
+    def __init__(self, test_data, y_true, summary_path):
         self.y_true = y_true
         self.test_data = test_data
-        self.name = name
+        self.summary_path = summary_path
 
     def on_epoch_end(self, epoch, logs=None):
         y_pred = self.model.predict(self.test_data)
@@ -23,9 +24,9 @@ class MetricsCallback(Callback):
         report_dictionary = classification_report(self.y_true, y_pred, output_dict = True)
         print(classification_report(self.y_true,y_pred,output_dict=False)) 
 
-        summary_path = f"models/{self.name}_Stats.txt"
+        os.makedirs(os.path.dirname(self.summary_path), exist_ok=True)
 
-        with open(summary_path, 'a') as f:
+        with open(self.summary_path, 'a') as f:
             f.write('Model Stats:\n')
             f.write(classification_report(self.y_true,y_pred,output_dict=False)) 
 
