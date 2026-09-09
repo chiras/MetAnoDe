@@ -49,15 +49,18 @@ Here an example to install in a conda environment:
 conda create --name metanode python=3.11
 conda activate metanode
 
-conda install tensorflow=2.17
-pip install keras==3.3.3
-conda install Numpy=1.23.5
-conda install Pandas=2.2.1
-conda install Scikit-learn=1.4.2
-conda install conda-forge::BioPython=1.84
-conda install matplotlib=3.8.4
-pip install keras-tuner==1.4.7
+conda install -c conda-forge \
+	numpy=1.23.5 \
+	Pandas=2.2.1 \
+	Scikit-learn=1.4.2 \
+	BioPython=1.84 \
+	matplotlib=3.8.4
 
+python -m pip install  \
+	tensorflow==2.17.0  \
+	keras==3.3.3 \
+	keras-tuner==1.4.7
+	
 KERAS_BACKEND=tensorflow
 ```
 
