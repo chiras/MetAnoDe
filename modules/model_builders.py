@@ -40,10 +40,10 @@ class LSTMHyperModel(kt.HyperModel):
         self.final_activation=final_activation
 
     def build(self, hp):
-        hp_embeddim = hp.Choice('embeddim', values=[128]) #256 // 64, 128
-        hp_units = hp.Choice('units',values=[32, 64]) # 4-64
+        hp_embeddim = hp.Choice('embeddim', values=[64,128]) #256 // 64, 128
+        hp_units = hp.Choice('units',values=[8, 32, 64]) # 4-64
         hp_dropout = hp.Choice('dropout', values=[0.25, 0.5]) #seq 1-5 0.1, 
-        hp_learning_rate = hp.Choice('learning_rate', values=[3e-4]) # 1e-3, 1e-4, 
+        hp_learning_rate = hp.Choice('learning_rate', values=[1e-3,3e-4]) # 1e-3, 1e-4, 
 
         model = keras.Sequential()
         model.add(keras.layers.Embedding(len(self.encoder.index_word) + 1, hp_embeddim, mask_zero=True, name="LSTM_Embed"))
@@ -83,8 +83,8 @@ class CNNHyperModel(kt.HyperModel):
 
     def build(self, hp):   
         # parameters to be tuned
-        hp_learning_rate = hp.Choice('learning_rate', values=[3e-4]) #1e-3, 1e-4, 
-        hp_c1layerfilter = hp.Choice('filters', values=[32, 64]) #, 256 , 128
+        hp_learning_rate = hp.Choice('learning_rate', values=[1e-3,3e-4]) #1e-3, 1e-4, 
+        hp_c1layerfilter = hp.Choice('filters', values=[32, 64, 128]) #, 256 , 128
         hp_dropout = hp.Choice('dropout', values=[0.25, 0.5]) #, 256 0.1, 
 
         model = keras.Sequential(name="model_conv1D")
