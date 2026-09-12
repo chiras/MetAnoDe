@@ -17,7 +17,7 @@ parser.add_argument('-query', dest='query_file', required=True, help="Amplicon d
 parser.add_argument('-p', dest='project_name', required=True, help="Model name")
 parser.add_argument('-2c', dest='two_classes', action='store_true', required=False, help="Switch from multiclass to binary (DEPRECEATED)")
 parser.add_argument('-r', dest='recalibrate', action='store_true', required=False, help="Switch to tuner recalibration")
-parser.add_argument('-e', dest='epochs', required=False, default=20, help="change epochs from 20 to other value")
+parser.add_argument('-e', dest='epochs', required=False, type=int, default=20, help="change epochs from 20 to other value")
 parser.add_argument('-v', dest='verbose', action='store_true', required=False, help="Switch to verbose mode")
 parser.add_argument('-t', dest='threads', required=False, help="Number of threads")
 parser.add_argument('-ot', dest='offtargets', required=False, help="Number of threads")
