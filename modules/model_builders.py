@@ -41,7 +41,7 @@ class LSTMHyperModel(kt.HyperModel):
 
     def build(self, hp):
         hp_embeddim = hp.Choice('embeddim', values=[64,128]) #256 // 64, 128
-        hp_units = hp.Choice('units',values=[8, 32, 64]) # 4-64
+        hp_units = hp.Choice('units',values=[32, 64]) # 4-64
         hp_dropout = hp.Choice('dropout', values=[0.25, 0.5]) #seq 1-5 0.1, 
         hp_learning_rate = hp.Choice('learning_rate', values=[1e-3,3e-4]) # 1e-3, 1e-4, 
 
