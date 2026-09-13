@@ -66,7 +66,10 @@ class LSTMHyperModel(kt.HyperModel):
                                     activation=self.final_activation, 
                                     name="LSTM_Dense"))
 
-        optimizer = keras.optimizers.Adam(learning_rate=hp_learning_rate) # 1e-2
+        optimizer = keras.optimizers.Adam(
+            learning_rate=hp_learning_rate,
+            clipnorm=1.0
+        ) # improve stability of training
 
         model.compile(optimizer=optimizer, loss=self.loss_func,
                     metrics=["accuracy"])

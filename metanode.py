@@ -9,6 +9,8 @@ import pandas as pd
 import subprocess
 import json
 
+print("EXPERIMENTAL VERSION: 2024-06-10")
+
 start_time = time.time()
 
 parser = argparse.ArgumentParser(description="Amplicon Anomaly Detection")
@@ -809,7 +811,7 @@ summary_path = os.path.join(model_dir, "Stats.txt")
 if model_exist_cnn:
     # Try to load the saved model
     cnn_model = load_model(model_path)
-    cnn_model.compile(optimizer=opt, loss=loss_func)
+    cnn_model.compile(optimizer=opt, loss=loss_func, metrics=["accuracy"])
     log(f"\n");log(f"CNN Model loaded successfully.")
 else:
     log(f"\n");log(f"CNN Model file not found. Creating a new model...")
@@ -858,24 +860,47 @@ else:
         best_hps = cnn_tuner.get_best_hyperparameters(num_trials=1)[0]
         log('CNN Hyperparameter Tuning completed\n')
         log(f"{best_hps.values}")
-
+    #
     cnn_model = cnn_hyper_model.build(best_hps)
+
+    cnn_callbacks = [
+        keras.callbacks.ModelCheckpoint(
+            filepath=model_path,
+            monitor="val_accuracy",
+            mode="max",
+            save_best_only=True,
+            verbose=1
+        ),
+        keras.callbacks.EarlyStopping(
+            monitor="val_accuracy",
+            mode="max",
+            patience=8,
+            restore_best_weights=True,
+            verbose=1
+        )
+    ]
+
     cnn_history = cnn_model.fit(
         X_train_padded,
         y_train,
         shuffle=True,
         batch_size=64,
         epochs=max_epoch,
-        validation_data=(X_valid_padded, y_valid)
+        validation_data=(X_valid_padded, y_valid),
+        callbacks=cnn_callbacks
     )
+
     log('CNN Model completed\n')
 
     val_acc_per_epoch = cnn_history.history['val_accuracy']
     best_epoch = val_acc_per_epoch.index(max(val_acc_per_epoch)) + 1
     log(f'Best epoch: {best_epoch}')
 
+    # EarlyStopping already restores the best weights.
+    # Save once more so the in-memory model and disk model are guaranteed identical.
     cnn_model.save(model_path)
-    log("CNN Model saved successfully.")
+    log("CNN best model saved successfully.")
+    #
 
     helper.plot_history(cnn_history, model_dir, "CNN", best_hps.values)
     helper.save_summary(cnn_model, cnn_history, best_hps, model_dir, "CNN")
@@ -883,15 +908,10 @@ else:
     with open(summary_path, 'a') as f:
         f.write('##### CNN #####:\n')
 
-    cnn_model.fit(
-        X_train_padded,
-        y_train,
-        batch_size=64,
-        epochs=1,
-        shuffle=True,
-        validation_data=(X_valid_padded, y_valid),
-        callbacks=[metrics_callback]
-    )
+    # Write final validation metrics for the restored best model without
+    # performing another training epoch (which would change the weights).
+    metrics_callback.set_model(cnn_model)
+    metrics_callback.on_epoch_end(epoch=best_epoch - 1, logs=None)
     
 log(f"CNN architecture: ") if verbose else None
 log(cnn_model.summary()) if verbose else None
@@ -902,7 +922,11 @@ model_path = os.path.join(model_dir, "LSTM.keras")
 if model_exist_lstm:
     # Try to load the saved model
     lstm_model = load_model(model_path)
-    lstm_model.compile(optimizer='adam', loss=loss_func)
+    lstm_model.compile(
+        optimizer=keras.optimizers.Adam(learning_rate=learning_rate, clipnorm=1.0),
+        loss=loss_func,
+        metrics=["accuracy"]
+    )
     log(f"\n");log(f"LSTM Model loaded successfully.")
 else:
     log(f"\n");log(f"LSTM Model file not found. Creating a new model...")
@@ -950,15 +974,34 @@ else:
         best_hps = lstm_tuner.get_best_hyperparameters(num_trials=1)[0]
         log('LSTM Hyperparameter Tuning completed\n')
         log(f"{best_hps.values}")
-
+    #
     lstm_model = lstm_hyper_model.build(best_hps)
+
+    lstm_callbacks = [
+        keras.callbacks.ModelCheckpoint(
+            filepath=model_path,
+            monitor="val_accuracy",
+            mode="max",
+            save_best_only=True,
+            verbose=1
+        ),
+        keras.callbacks.EarlyStopping(
+            monitor="val_accuracy",
+            mode="max",
+            patience=8,
+            restore_best_weights=True,
+            verbose=1
+        )
+    ]
+
     lstm_history = lstm_model.fit(
         X_train_padded,
         y_train,
         batch_size=64,
         shuffle=True,
         epochs=max_epoch,
-        validation_data=(X_valid_padded, y_valid)
+        validation_data=(X_valid_padded, y_valid),
+        callbacks=lstm_callbacks
     )
 
     val_acc_per_epoch = lstm_history.history['val_accuracy']
@@ -966,23 +1009,22 @@ else:
     log(f'Best epoch: {best_epoch}')
     log('LSTM Model completed\n')
 
+    # EarlyStopping restored the best weights.
+    # Save them explicitly so disk and memory are identical.
     lstm_model.save(model_path)
-    log("Model saved successfully.")
-
+    log("LSTM best model saved successfully.")
+    #
+    
     helper.plot_history(lstm_history, model_dir, "LSTM", best_hps.values)
     helper.save_summary(lstm_model, lstm_history, best_hps, model_dir, "LSTM")
 
     with open(summary_path, 'a') as f:
         f.write('\n\n##### LSTM #####:\n')
 
-    lstm_model.fit(
-        X_train_padded,
-        y_train,
-        batch_size=64,
-        epochs=1,
-        validation_data=(X_valid_padded, y_valid),
-        callbacks=[metrics_callback]
-    )
+    # Write final validation metrics for the restored best model without
+    # performing another training epoch (which would change the weights).
+    metrics_callback.set_model(lstm_model)
+    metrics_callback.on_epoch_end(epoch=best_epoch - 1, logs=None)
 
 log(f"LSTM architecture: ") if verbose else None
 log(lstm_model.summary()) if verbose else None
