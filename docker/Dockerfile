@@ -9,13 +9,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends git \
  && rm -rf /var/lib/apt/lists/*
 
 RUN python -m pip install --upgrade pip \
- && pip install \
-      "keras==3.3.3" \
-      "keras-tuner==1.4.7" \
-      "matplotlib==3.8.4" \
-      "biopython>=1.83" \
-      "pandas>=2.0" \
-      "scikit-learn>=1.4"
+  && pip install \
+  Pandas==2.2.1 \
+  numpy==1.26.4 \
+  Scikit-learn==1.4.2 \
+  BioPython==1.84 \
+  matplotlib==3.8.4 \
+  tensorflow==2.17.0 \
+  keras==3.3.3 \
+  keras-tuner==1.4.7
 
 # Code lives in /opt (baked into image)
 WORKDIR /opt
