@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd 
 import subprocess
 import json
+import shlex
 
 print("EXPERIMENTAL VERSION: 2024-06-10")
 
@@ -121,6 +122,9 @@ def log(msg: str):
     except Exception:
         # don't crash training because logging failed
         pass
+    
+command_line = " ".join(shlex.quote(arg) for arg in sys.argv)
+log(f"Command: {command_line}")
 
 log(f"Random seed: {SEED}")
 
