@@ -107,37 +107,37 @@ for example, the pretrained ```ITS2_2026_04_01``` and ```16S_2026_04_03``` model
 docker run --gpus all \
     -v $PWD:/data \
     --rm metanode:tf-25.01 \
-    -db data/plant_ITS2/ITS2.Quaresma2024.all.trimmedpy2.fasta \
-    -ot data/plant_ITS2/ITS2.fungi.trim.1.fasta \
+    -db data/plant_ITS2/ITS2.Quaresma2024.all.trimmedpy2.fasta.gz \
+    -ot data/plant_ITS2/ITS2.fungi.trim.1.fasta.gz \
     -p plant_ITS2_m1.4 \
-    -query data/plant_ITS2/ITS2.Quaresma2024.all.trimmedpy2.fasta \
+    -query data/plant_ITS2/ITS2.Quaresma2024.all.trimmedpy2.fasta.gz \
     -e 40
 
 docker run --gpus all \
     -v $PWD:/data \
     --rm metanode:tf-25.01 \
-    -db data/fungi_ITS2/unite_ITS2_hybrid.fasta \
-    -ot data/fungi_ITS2/plant_ITS2_random50000.fasta \
+    -db data/fungi_ITS2/unite_ITS2_hybrid.fasta.gz \
+    -ot data/fungi_ITS2/plant_ITS2_random50000.fasta.gz \
     -p fungal_ITS2_m1.3 \
-    -query data/fungi_ITS2/unite_ITS2_hybrid.fasta \
+    -query data/fungi_ITS2/unite_ITS2_hybrid.fasta.gz \
     -e 40
-
+ 
 docker run --gpus all \
     -v $PWD:/data \
     --rm metanode:tf-25.01 \
-    -db data/bacteria_16S-V4/16S.silva.trim.derep.fa \
-    -ot data/bacteria_16S-V4/16S.mitochondria.trim.1.derep.fasta,data/bacteria_16S-V4/16S.chloroplast.trim.1.derep.fasta \
+    -db data/bacteria_16S-V4/16S.silva.trim.derep.fa.gz \
+    -ot data/bacteria_16S-V4/16S.mitochondria.trim.1.derep.fasta,data/bacteria_16S-V4/16S.chloroplast.trim.1.derep.fasta.gz \
     -p bacterial_16S-V4_m1.4 \
-    -query data/bacteria_16S-V4/16S.silva.trim.derep.fa \
+    -query data/bacteria_16S-V4/16S.silva.trim.derep.fa.gz \
     -e 40
 
 docker run --gpus all \
     -v $PWD:/data \
     --rm metanode:tf-25.01 \
-    -db data/invertebrate_COI-5P/bold_COI_m1.1.invertebrates.taxonomic_sample.primer_trimmed.fasta \
-    -ot data/invertebrate_COI-5P/bold_COI_m1.1.fungi.taxonomic_sample.primer_trimmed.fasta,data/invertebrate_COI-5P/bold_COI_m1.1.plants.taxonomic_sample.primer_trimmed.fasta,data/invertebrate_COI-5P/bold_COI_m1.1.protists.taxonomic_sample.primer_trimmed.fasta,data/invertebrate_COI-5P/bold_COI_m1.1.vertebrata.taxonomic_sample.primer_trimmed.fasta \
+    -db data/invertebrate_COI-5P/bold_COI_m1.1.invertebrates.taxonomic_sample.primer_trimmed.fasta.gz \
+    -ot data/invertebrate_COI-5P/bold_COI_m1.1.fungi.taxonomic_sample.primer_trimmed.fasta.gz,data/invertebrate_COI-5P/bold_COI_m1.1.plants.taxonomic_sample.primer_trimmed.fasta.gz,data/invertebrate_COI-5P/bold_COI_m1.1.protists.taxonomic_sample.primer_trimmed.fasta.gz,data/invertebrate_COI-5P/bold_COI_m1.1.vertebrata.taxonomic_sample.primer_trimmed.fasta.gz \
     -p invertebrate_COI-5P_m1.2 \
-    -query data/invertebrate_COI-5P/bold_COI_m1.1.invertebrates.taxonomic_sample.primer_trimmed.fasta \
+    -query data/invertebrate_COI-5P/bold_COI_m1.1.invertebrates.taxonomic_sample.primer_trimmed.fasta.gz \
     -e 40
 	
 ```

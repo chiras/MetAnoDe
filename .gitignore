@@ -20,3 +20,4 @@ data/.DS_Store
 splits/*.csv.gz
 models/*_cache.npz
 modules/data_extraction
+models/*
