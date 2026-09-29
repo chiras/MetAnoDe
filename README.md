@@ -102,24 +102,24 @@ python metanode.py -query <query.fasta> \
 	-ot <ot1.fasta>,<ot2.fasta>,<ot3.fasta>
 ```
 
-for example, the pretrained ```ITS2_2026_04_01``` and ```16S_2026_04_03``` models were generated using (make sure to be in the root dir of the repo): 
+for example, the pretrained ```plant_ITS2_m1.4``` and ```bacterial_16S-V4_m1.4``` models were generated using (make sure to be in the root dir of the repo): 
 ```sh
 docker run --gpus all  \
 	-v $PWD:/data  \
 	--rm metanode:tf-25.01 \
-	-db data/ITS2.Quaresma2024.all.trimmedpy2.fasta \
-	-ot data/ITS2.fungi.trim.1.fasta \
-	-p ITS2_2026_04_01 \
-	-query data/ITS2.Quaresma2024.all.trimmedpy2.fasta
+	-db data/plant_ITS2/plant_ITS2_Quaresma2024_trim.fasta \
+	-ot data/plant_ITS2/fungal_ITS2_UNITE_trim.fasta \
+	-p plant_ITS2_m1.4 \
+	-e 50
 
 docker run --gpus all  \
 	-v $PWD:/data  \
 	--rm metanode:tf-25.01 \
-	-db data/16S.silva.trim.derep.fa \
-	-ot data/16S.mitochondria.trim.1.derep.fasta,data/16S.chloroplast.trim.1.derep.fasta \
-	-p 16S_2026_04_03 \
-	-query data/16S.silva.trim.derep.fa
-
+	-db data/bacterial_16S-V4/16S.silva.trim.derep.fa \
+	-ot data/bacterial_16S-V4/16S.mitochondria.trim.1.derep.fasta,data/16S.chloroplast.trim.1.derep.fasta \
+	-p bacterial_16S-V4_m1.4 \
+	-query data/16S.silva.trim.derep.fa \
+	-e 50
 	
 ```
 Training of pre-trained models was conducted on Ubuntu 24.04 with GPU support, but have also been tested on Ubuntu 22.04/24.04 with and without GPU support, and MacOSX 12.3 without GPU support. Training of pretrained models were conducted on Intel i7 with 256 GB RAM and 24GB NVIDIA RTX 4090 for ```ITS2_2026``` and AMD Ryzen 7 with 32 GB RAM and 20GB NVIDIA RTX 4070 Ti SUPER for ```16S_2026```.  
