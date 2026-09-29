@@ -405,6 +405,111 @@ def create_artificial_chimera(
 def create_artificial_errorate(df, num_sequences, typeerror):
     headers = df['headers'].tolist()
     sequences = df['sequences'].tolist()
+
+    chimera_headers = []
+    chimera_sequences = []
+    chimera_sizes = []
+    chimera_size = 1
+
+    # Store the rates actually sampled during generation
+    sampled_rates = []
+
+    sequence_length = len(sequences)
+
+    for _ in range(num_sequences):
+        # Pick random sequence
+        idx1 = random.randint(0, sequence_length - 1)
+        seq1 = sequences[idx1]
+
+        if typeerror == "indel":
+            indel_rate = random.uniform(0.025, 0.05)
+            sampled_rates.append(indel_rate)
+
+            chimera_sequence = sim_indel(
+                seq1,
+                indel_rate,
+                indel_rate
+            )
+            chimera_target = 1
+            chimera_header = f"art-indel_{headers[idx1]}"
+            chimera_target4d = 2  # indels
+
+        if typeerror == "subst":
+            subst_rate = random.uniform(0.05, 0.10)
+            sampled_rates.append(subst_rate)
+
+            chimera_sequence = sim_error(seq1, subst_rate)
+            chimera_target = 1
+            chimera_header = f"art-subst_{headers[idx1]}"
+            chimera_target4d = 1  # substitutions
+
+        if typeerror == "lowindel":
+            chimera_sequence = sim_indel(seq1, 0.005, 0.005)
+            chimera_target = 0
+            chimera_header = f"low-indel_{headers[idx1]}"
+            chimera_target4d = 0  # true
+
+        if typeerror == "lowsubst":
+            chimera_sequence = sim_error(seq1, 0.005)
+            chimera_target = 0
+            chimera_header = f"low-subst_{headers[idx1]}"
+            chimera_target4d = 0  # true
+
+        chimera_headers.append(chimera_header)
+        chimera_sequences.append(chimera_sequence)
+
+    # Report sampled high-error rates
+    if sampled_rates:
+        rate_min = min(sampled_rates)
+        rate_max = max(sampled_rates)
+        rate_mean = sum(sampled_rates) / len(sampled_rates)
+
+        if typeerror == "subst":
+            # sim_error() can randomly select the original nucleotide.
+            # Therefore only 3/4 of attempted substitutions are expected
+            # to produce an actual nucleotide difference.
+            div_min = rate_min * 0.75
+            div_max = rate_max * 0.75
+            div_mean = rate_mean * 0.75
+
+            print(
+                f"--- Substitution anomaly generation: "
+                f"sampled rate min={rate_min * 100:.2f}%, "
+                f"max={rate_max * 100:.2f}%, "
+                f"mean={rate_mean * 100:.2f}% | "
+                f"expected actual sequence divergence "
+                f"min={div_min * 100:.2f}%, "
+                f"max={div_max * 100:.2f}%, "
+                f"mean={div_mean * 100:.2f}%"
+            )
+
+        elif typeerror == "indel":
+            # The same sampled rate is independently applied to
+            # insertion and deletion at each sequence position.
+            # Report these separately rather than treating them as
+            # substitution-like sequence divergence.
+            print(
+                f"--- Indel anomaly generation: "
+                f"sampled insertion/deletion rate each "
+                f"min={rate_min * 100:.2f}%, "
+                f"max={rate_max * 100:.2f}%, "
+                f"mean={rate_mean * 100:.2f}% | "
+                f"approx. combined indel-event probability "
+                f"min={rate_min * 2 * 100:.2f}%, "
+                f"max={rate_max * 2 * 100:.2f}%, "
+                f"mean={rate_mean * 2 * 100:.2f}%"
+            )
+
+    chimera_df = pd.DataFrame({
+        'headers': chimera_headers,
+        'sequences': chimera_sequences,
+        'Target': [chimera_target] * num_sequences,
+        'Target4D': [chimera_target4d] * num_sequences,
+        'sizes': [chimera_size] * num_sequences
+    })
+
+    return chimera_df    headers = df['headers'].tolist()
+    sequences = df['sequences'].tolist()
     
     chimera_headers = []
     chimera_sequences = []
@@ -412,7 +517,7 @@ def create_artificial_errorate(df, num_sequences, typeerror):
     chimera_size = 1
 
     sequence_length = len(sequences)
-    
+    print(f"--- Using variable error rates corresponding to 3.75-7.5% actual divergence.")    
     for _ in range(num_sequences):
         # Pick random sequence
         idx1 = random.randint(0, sequence_length - 1)
