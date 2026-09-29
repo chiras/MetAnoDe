@@ -418,12 +418,15 @@ def create_artificial_errorate(df, num_sequences, typeerror):
         idx1 = random.randint(0, sequence_length - 1)
         seq1 = sequences[idx1]
         if (typeerror == "indel"):
-            chimera_sequence = sim_indel(seq1, 0.05, 0.05)
+            indel_rate = random.uniform(0.025, 0.05) # variable indel  rates. correspond to 3.75-7.5% actual divergence
+            chimera_sequence = sim_indel(seq1, indel_rate, indel_rate)
             chimera_target = 1
             chimera_header = f"art-indel_{headers[idx1]}"
             chimera_target4d = 2 # indels
+
         if (typeerror == "subst"):
-            chimera_sequence = sim_error(seq1, 0.1)
+            subst_rate = random.uniform(0.05, 0.10) # variable subst  rates. correspond to 3.75-7.5% actual divergence
+            chimera_sequence = sim_error(seq1, subst_rate)
             chimera_target = 1
             chimera_header = f"art-subst_{headers[idx1]}"
             chimera_target4d = 1 # substitutions
