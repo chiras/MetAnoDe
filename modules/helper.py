@@ -6,6 +6,7 @@ import random
 import re
 import os
 import json
+import gzip
 
 os.makedirs("predictions", exist_ok=True)
 
@@ -190,25 +191,36 @@ def read_fasta(file_path, target, target2):
     headers = []
     targets = []
     sizes = []
-    with open(file_path, "r") as fasta_file:
-        for record in SeqIO.parse(fasta_file, "fasta"):            
-            if len(str(record.id)) >0 and len(str(record.seq)) >0:
-                output_string = ''.join([char if char in 'ACGT' else 'N' for char in str(record.seq).upper()])
+
+    # Transparently support both uncompressed and gzip-compressed FASTA files
+    if file_path.lower().endswith(".gz"):
+        fasta_handle = gzip.open(file_path, "rt")
+    else:
+        fasta_handle = open(file_path, "r")
+
+    with fasta_handle as fasta_file:
+        for record in SeqIO.parse(fasta_file, "fasta"):
+            if len(str(record.id)) > 0 and len(str(record.seq)) > 0:
+                output_string = ''.join(
+                    [char if char in 'ACGT' else 'N'
+                     for char in str(record.seq).upper()]
+                )
                 sequences.append(output_string)
                 headers.append(str(record.id))
                 targets.append(int(target))
+
                 size_match = re.search(r'size=(\d+)', str(record.id))
                 if size_match:
                     sizes.append(int(size_match.group(1)))
                 else:
-                    sizes.append(int(1))                 
+                    sizes.append(1)
 
     sequences_dict = {}
-    sequences_dict['headers'] = headers 
-    sequences_dict['sequences'] = sequences 
-    sequences_dict['Target'] = targets 
-    sequences_dict['Target4D'] = target2 
-    sequences_dict['sizes'] = sizes 
+    sequences_dict['headers'] = headers
+    sequences_dict['sequences'] = sequences
+    sequences_dict['Target'] = targets
+    sequences_dict['Target4D'] = target2
+    sequences_dict['sizes'] = sizes
 
     sequences_dict = pd.DataFrame(sequences_dict)
     return sequences_dict
