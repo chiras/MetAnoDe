@@ -447,7 +447,8 @@ def create_artificial_errorate(df, num_sequences, typeerror):
             chimera_target4d = 2  # indels
 
         if typeerror == "subst":
-            subst_rate = random.uniform(0.05, 0.10)
+            subst_rate = random.uniform(0.0667, 0.20) # 5-15% expected actual nucleotide divergence.
+            #subst_rate = random.uniform(0.05, 0.10) # 3.75-7.5% expected actual nucleotide divergence.
             sampled_rates.append(subst_rate)
 
             chimera_sequence = sim_error(seq1, subst_rate)
