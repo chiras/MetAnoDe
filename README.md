@@ -166,62 +166,115 @@ The script supports both GPU and CPU processing; however, it is important to not
 
 By default, the software retains all sequences in the query data but annotates them based on their classification from each of the three models in the output. However, an option for sequence removal is also available. The software generates two output files stored in the 'predictions' subfolder: a comma-separated file (CSV) presenting classification results in tabular format, and a second file containing flagged sequences (or a subset if removal is opted) in FASTA format.
 
-### R function to filter data
-```metanode_filter()``` filters a phyloseq object using MetAnoDe anomaly predictions. Taxa predicted as anomalous can be removed either unconditionally or, more conservatively, only if they are both low-prevalence and low-abundance across samples. This approach reduces likely artefacts while minimizing the loss of biologically relevant taxa.
+## R function to filter data
 
-The function:
-* accepts a phyloseq object and a MetAnoDe results table
-* detects whether the OTU/ASV table contains raw counts or relative abundances
-* computes prevalence across samples
-* computes abundance using the median of non-zero values by default
+`metanode_filter()` filters a phyloseq object using MetAnoDe predictions.
+MetAnoDe classes are handled in two groups, because they behave differently
+in real data:
 
-Taxa removal follows these rules:
-* if no thresholds are provided: all taxa flagged as not true are removed
-* if thresholds are used: taxa are removed only if
-	*flagged_as_not_true* AND *low_prevalence* AND/OR *low_abundance*
+* **Error classes** (substitution, indel, chimera) are typically rare across
+  samples. They can be removed either unconditionally or, more conservatively,
+  only if they are also rare (low prevalence and/or low abundance). The
+  conservative mode reduces the risk of removing genuine taxa that were
+  misclassified.
+* **Off-target classes** (e.g. chloroplast or mitochondrial 16S) are often
+  abundant and widespread, so a rarity rule would keep exactly these. By
+  default they are removed regardless of abundance
+  (`remove_offtarget_always = TRUE`).
 
-This conservative logic ensures that taxa are only discarded when they lack both recurrence across samples and meaningful abundance, which is consistent with expectations for sequencing errors and PCR artefacts.
+Note: chimeras and systematic errors derived from abundant parent sequences
+can recur across samples. The conservative mode keeps some of these. This is
+the accepted trade-off for protecting real taxa.
 
-```R
+### What the function does
+
+* accepts a phyloseq object and a MetAnoDe results table (data.frame or CSV path)
+* detects whether the OTU/ASV table contains counts, relative abundances or percent
+* computes prevalence (fraction of samples in which a taxon occurs)
+* computes abundance as the median of non-zero values (default), so that
+  real but patchy taxa are not treated as low-abundance
+* returns the filtered phyloseq object, a per-taxon summary table and the
+  parameters used
+
+### Removal rules
+
+| Class group | Rule |
+|---|---|
+| true | always kept |
+| off-target | removed (default); with `remove_offtarget_always = FALSE` same rule as error classes |
+| error | removed if flagged AND low prevalence AND low abundance |
+| no prediction | kept, with a warning |
+
+A threshold set to `NULL` is not applied:
+
+| `abundance_threshold` | `prevalence_threshold` | Error classes removed if |
+|---|---|---|
+| value | value | low abundance AND low prevalence (recommended) |
+| value | `NULL` | low abundance |
+| `NULL` | value | low prevalence |
+| `NULL` | `NULL` | always (all flagged taxa removed) |
+
+`abundance_threshold` must be in the units of the OTU table: reads for counts
+(e.g. 10), a fraction for relative abundances (e.g. 0.01), percent for
+percentage tables (e.g. 1). The function warns if units appear inconsistent.
+
+### Usage
+
+```r
 library(phyloseq)
-source metanode_filter.R
+source("metanode_filter.R")
 
-# remove flagged taxa only if both low abundance and low prevalence (recommended)
+# recommended: conservative for error classes, off-target always removed
 ps_filt <- metanode_filter(
   phyloseq = ps,
-  metanode = meta,
+  metanode = "predictions/run_Ensemble.query.csv",
   abundance_threshold = 0.01,
-  prevalence_threshold = 0.02
+  prevalence_threshold = 0.02,
+  offtarget_labels = c("chloroplast", "mitochondria")
 )
 
-# remove flagged taxa only if low abundance
-ps_filt <- metanode_filter(
-  phyloseq = ps,
-  metanode = meta,
-  abundance_threshold = 0.01,
-  prevalence_threshold = NULL
-)
+# remove error classes only if low abundance
+ps_filt <- metanode_filter(ps, meta,
+  abundance_threshold = 0.01, prevalence_threshold = NULL,
+  offtarget_labels = c("chloroplast", "mitochondria"))
 
-# remove flagged taxa only if low prevalence
-ps_filt <- metanode_filter(
-  phyloseq = ps,
-  metanode = meta,
-  abundance_threshold = NULL,
-  prevalence_threshold = 0.02
-)
+# remove error classes only if low prevalence
+ps_filt <- metanode_filter(ps, meta,
+  abundance_threshold = NULL, prevalence_threshold = 0.02,
+  offtarget_labels = c("chloroplast", "mitochondria"))
 
 # remove all flagged taxa
-ps_filt <- metanode_filter(
-  phyloseq = ps,
-  metanode = meta,
-  abundance_threshold = NULL,
-  prevalence_threshold = NULL
-)
+ps_filt <- metanode_filter(ps, meta,
+  abundance_threshold = NULL, prevalence_threshold = NULL,
+  offtarget_labels = c("chloroplast", "mitochondria"))
 
+# per-taxon decisions and parameters used
 summary_df <- attr(ps_filt, "metanode_filter_summary")
-head(summary_df)
-
+table(summary_df$reason)
+attr(ps_filt, "metanode_filter_params")
 ```
+
+### Important arguments
+
+| Argument | Default | Meaning |
+|---|---|---|
+| `offtarget_labels` | `NULL` | Class labels of off-target classes, exactly as in the MetAnoDe output. If `NULL`, all non-true classes are treated as error classes (warning). |
+| `true_label` | `"EN_positive"` | Label of the true class |
+| `class_col` / `id_col` | `"EN_class"` / `"headers"` | Columns of the MetAnoDe table |
+| `strip_size` | `FALSE` | Remove `;size=N` suffixes before matching IDs |
+| `use_nonzero_median` | `TRUE` | Abundance from non-zero values only |
+
+### Checks before interpreting results
+
+* **Unmatched taxa.** All taxa should have a prediction. Unmatched taxa are
+  kept unfiltered. A high number usually means an ID mismatch, e.g.
+  `;size=` suffixes (use `strip_size = TRUE`).
+* **Empty samples.** These lower the prevalence of all taxa. Remove them
+  before filtering.
+* **Order of steps.** Apply this ASV-level filter alongside standard per-sample
+  low-abundance filtering, not as a replacement for it.
+
+
 ## License
 
 This project provides a derived container based on
