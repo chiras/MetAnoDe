@@ -1,108 +1,80 @@
 # MetAnoDe
 
-MetAnoDe employs an alignment-free approach that complements existing tools in cleaning up metabarcoding data. The software makes use of deep-neural networks, more specifically CNNs and LSTMs, as well as an ensemble of both previous models.
+MetAnoDe employs an alignment-free approach that complements existing tools in cleaning up metabarcoding data. The software uses deep neural networks, more specifically a convolutional neural network (CNN) and a long short-term memory network (LSTM), combined into an ensemble model.
 
-**Citation:** Keller 2025 EcoEvoEXiv https://doi.org/10.32942/X2792N (peer-review version pending)
+**Citation:** Keller 2025 EcoEvoRxiv https://doi.org/10.32942/X2792N (peer-review version pending)
 
-Pre-trained models are available for: 
-* Bacterial 16S-V4 matching the target region of Kozich et al. (2014, https://doi.org/10.1128/AEM.01043-13) --> ```16S_2026_04_03```
-* Plant ITS2 matching the target region of Sickel et al. (2015, https://doi.org/10.1186/s12898-015-0051-y) --> ```ITS2_2026_04_01```
+Pre-trained models are available in the subfolder `models` for:
 
-More models can be trained on demand (see below, or file an issue and tag @chiras)
+| Marker | Target region | Off-target classes | Model name | fw primer | rv primer |
+|---|---|---|---|---|---|
+| Bacterial 16S-V4 | Kozich et al. (2014, https://doi.org/10.1128/AEM.01043-13) | mitochondria, chloroplast | `bacterial_16S-V4_m1.4` | GTGCCAGCMGCCGCGGTAA | GGACTACHVGGGTWTCTAAT |
+| Plant ITS2 | Sickel et al. (2015, https://doi.org/10.1186/s12898-015-0051-y) | fungi | `plant_ITS2_m1.4` | ATGCGATACTTGGTGTGAAT | TCCTCCGCTTATTGATATGC |
+| Fungal ITS2 | Ihrmark et al. (2012) / White et al. (1990) | plants | `fungal_ITS2_m1.3` | GTGARTCATCGARTCTTTG | TCCTCCGCTTATTGATATGC |
+| Invertebrate COI-5P | Leray et al. 2013 Frontiers in Zoology https://link.springer.com/article/10.1186/1742-9994-10-34 | fungi, plants, protists, vertebrates | `invertebrate_COI-5P_m1.2` | GGWACWGGWTGAACWGTWTAYCCYCC | TAIACYTCIGGRTGICCRAARAAYCA |
+
+More models can be trained on demand (see below, or file an issue and tag @chiras).
 
 ## Runtime considerations
-The script supports both GPU (Cuda) and CPU data processing. For data processing with pre-trained models, or such previously self trained, a difference is hardly noticable in relation to general metabarcoding procedures. For training of new models, there are however notable runtime improvements achievable when utilizing GPUs. 
+
+The script supports both GPU (CUDA) and CPU processing. For predictions with pre-trained or previously self-trained models, the difference is hardly noticeable compared with general metabarcoding procedures. For training of new models, GPUs reduce runtime considerably.
 
 **Recommendation:**
-* **Data processing only:** GPU (Cuda) or CPU viable (1-2 minutes runtime per run)
-* **Training of new marker models:** GPU (Cuda) support strongly recommended (6-7h runtime on GPU, multiple days for CPU only on moderately equipped PC, see below training section for details).
+* **Predictions only:** GPU (CUDA) or CPU (1-2 minutes runtime per run)
+* **Training of new marker models:** GPU (CUDA) strongly recommended (6-7 h on GPU, multiple days on a moderately equipped CPU-only PC; see training section for details)
 
-## Dependencies
+## Installation (Docker, recommended)
 
-### Option 1: Use a docker container (recommened)
-***Only to enable GPU support:*** *Make sure to install AND configure (below) the NVIDIA docker container toolkit*
+Docker is the recommended way to run MetAnoDe. All package versions are fixed in the image, so results do not depend on the local Python installation. For direct access to the Python environment (e.g. to modify or debug the code), see [Alternative installation: conda](#alternative-installation-conda-for-advanced-users-and-developers) at the end of this README.
+
+***Only for GPU support:*** *install AND configure the NVIDIA Container Toolkit*
 https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html
 
-Use the ```Dockerfile``` in the ```docker``` subfolder to create an image.
+Build the image from the `Dockerfile` in the `docker` subfolder:
 
 ```sh
-# build / rebuild (for including github updates) docker image
+# build / rebuild (rebuild to include GitHub updates)
 docker build --no-cache -t metanode:tf-25.01 .
 
-# example: run container with GPU support
-docker run --gpus all  -v $PWD:/data  --user $(id -u):$(id -g) --rm metanode:tf-25.01 -query /data/<query.fasta>  -p <model_name> -t 20 
+# run with GPU support
+docker run --gpus all -v $PWD:/data --user $(id -u):$(id -g) --rm metanode:tf-25.01 -query /data/<query.fasta> -p <model_name> -t 20
 
-# example: run container without GPU support
-docker run -v $PWD:/data  --user $(id -u):$(id -g) --rm metanode:tf-25.01 -query  /data/<query.fasta> -p <model_name> -t 20
+# run without GPU support
+docker run -v $PWD:/data --user $(id -u):$(id -g) --rm metanode:tf-25.01 -query /data/<query.fasta> -p <model_name> -t 20
 ```
 
-[OPTIONAL, not recommended] Force overwrite pretrained files into ```/data```: add flag ```  -e PRETRAINED_OVERWRITE=1 ```
+[OPTIONAL, not recommended] Force overwrite of pre-trained files in `/data`: add flag `-e PRETRAINED_OVERWRITE=1`
 
+## Predictions using pre-trained models
 
-### Option 2:  Use a conda environment (not recommended)
-***Only to enable GPU support:*** *Make sure to install AND configure AND test NVIDIA and CUDA properly*
-
-All dependencies need to be installed for proper execution of the code. 
-Here an example to install in a conda environment:
+Predictions can be generated directly with the pre-trained models. Further options are shown when running the script without arguments.
 
 ```sh
-conda create --name metanode python=3.11
-conda activate metanode
-
-conda install -c conda-forge \
-	numpy=1.23.5 \
-	Pandas=2.2.1 \
-	Scikit-learn=1.4.2 \
-	BioPython=1.84 \
-	matplotlib=3.8.4
-
-python -m pip install  \
-	tensorflow==2.17.0  \
-	keras==3.3.3 \
-	keras-tuner==1.4.7
-	
-KERAS_BACKEND=tensorflow
+docker run --gpus all -v $PWD:/data --user $(id -u):$(id -g) --rm metanode:tf-25.01 -query /data/<query.fasta> -p <model_name>
 ```
 
-## Predictions using pre-trained models 
+`<model_name>` is one of the pre-trained models in the subfolder `models` (see table above).
 
-Predictions can be promptly generated using the pre-trained models available in the repository. Additional customizable options can be explored by running the script without additional arguments. 
+Adapter and primer sequences must be removed before analysis to match the model, because they differ between library preparation strategies.
+
+## Predictions with other target regions and training of new models
+
+The workflow is fully automated and can be adapted to other target regions, but this requires training new models from scratch. Milestones are set during execution, so steps already completed are skipped when the run is repeated.
+
+Correctly trimmed and dereplicated reference sequences of the target group must be provided with `-db <ref.fasta>`. Optionally, known off-target amplicons can be added with `-ot <ot1.fasta>,<ot2.fasta>,<ot3.fasta>[,...]`. Each file becomes a separate off-target class, named after the file. A model name (`-p`) collects all models and parameters in `models/<model_name>/`. A trained model can be reused for new data by giving the same model name. Compressed (`.gz`) FASTA files are accepted for all inputs.
+
+Example of training and prediction in one run:
 
 ```sh
-# docker option, with GPU support
-docker run --gpus all  -v $PWD:/data --user $(id -u):$(id -g) --rm metanode:tf-25.01 -query <query.fasta> -p <model_name>
-
-# conda option
-python metanode.py -query <query.fasta> -p <model_name>
-```
-```<model_name>``` corresponds to a pretrained model available in the subfolder ```models``` (e.g ```16S_2026_04_03``` or ```ITS2_2026_04_01```).
-
-Adapter as well as primer sequences however need to be removed from data prior to analysis to match the model, as this varies between different amplicon library generation strategies. 
-
-## Predictions with other target regions and new training of models
-
-The workflow is entirely automated and can be adapted for different target regions, however necessitating complete training of models from scratch in such cases. 
-Milestones are set during execution, allowing to skip parts in case they are already present when needed.
-
-To initiate the process, correctly trimmed and deduplicated reference sequences must be provided using the parameter ```-db <ref.fasta>```. Optionally, multiple known off-target amplicon regions can be incorporated using ```-ot <ot1.fasta>,<ot2.fasta>,<ot3.fasta>[,...]```, ensuring each type is included separately in the model. A designated model name must be specified to consolidate all pertinent models and parameters. Once a model is trained, it can be reused for new data by specifying the corresponding model name. 
-
-An illustrative example of the software's call that involves both training models on new data and predicting query data in a unified execution:
-
-```sh
-# docker option, with GPU support
-docker run --gpus all  -v $PWD:/data  --rm metanode:tf-25.01 -query <query.fasta>  \
-	-p <model_name> \
-	-db <ref.fasta> \
-	-ot <ot1.fasta>,<ot2.fasta>,<ot3.fasta>
-
-# conda option
-python metanode.py -query <query.fasta> \
-	-p <model_name> \
-	-db <ref.fasta> \
-	-ot <ot1.fasta>,<ot2.fasta>,<ot3.fasta>
+docker run --gpus all -v $PWD:/data --rm metanode:tf-25.01 \
+    -query <query.fasta> \
+    -p <model_name> \
+    -db <ref.fasta> \
+    -ot <ot1.fasta>,<ot2.fasta>,<ot3.fasta>
 ```
 
-for example, the pretrained ```ITS2_2026_04_01``` and ```16S_2026_04_03``` models were generated using (make sure to be in the root dir of the repo): 
+The pre-trained models were generated with the following calls (run from the root directory of the repository). In these examples, `-query` is the training database itself and serves only as a technical test of the prediction step, not as performance evaluation.
+
 ```sh
 docker run --gpus all \
     -v $PWD:/data \
@@ -121,12 +93,12 @@ docker run --gpus all \
     -p fungal_ITS2_m1.3 \
     -query data/fungi_ITS2/unite_ITS2_hybrid.fasta.gz \
     -e 40
- 
+
 docker run --gpus all \
     -v $PWD:/data \
     --rm metanode:tf-25.01 \
     -db data/bacteria_16S-V4/16S.silva.trim.derep.fa.gz \
-    -ot data/bacteria_16S-V4/16S.mitochondria.trim.1.derep.fasta,data/bacteria_16S-V4/16S.chloroplast.trim.1.derep.fasta.gz \
+    -ot data/bacteria_16S-V4/16S.mitochondria.trim.1.derep.fasta.gz,data/bacteria_16S-V4/16S.chloroplast.trim.1.derep.fasta.gz \
     -p bacterial_16S-V4_m1.4 \
     -query data/bacteria_16S-V4/16S.silva.trim.derep.fa.gz \
     -e 40
@@ -139,32 +111,39 @@ docker run --gpus all \
     -p invertebrate_COI-5P_m1.2 \
     -query data/invertebrate_COI-5P/bold_COI_m1.1.invertebrates.taxonomic_sample.primer_trimmed.fasta.gz \
     -e 40
-	
 ```
-Training of pre-trained models was conducted on Ubuntu 24.04 with GPU support, but have also been tested on Ubuntu 22.04/24.04 with and without GPU support, and MacOSX 12.3 without GPU support. Training of pretrained models were conducted on Intel i7 with 256 GB RAM and 24GB NVIDIA RTX 4090 for ```ITS2_2026``` and AMD Ryzen 7 with 32 GB RAM and 20GB NVIDIA RTX 4070 Ti SUPER for ```16S_2026```.  
 
-The script supports both GPU and CPU processing; however, it is important to note that CPU processing significantly extends the duration of model training. Therefore, for efficient training, GPU utilization is strongly recommended here. There is no strict limit on the number of reference sequences and their lengths or off-target classes that can be incorporated. However, the memory required for encoding and training could potentially be a constraint depending on the available hardware resources. On above mentioned hardware, training took 6-7h each model. 
+Pre-trained models were trained on Ubuntu 24.04 with GPU support. The software was also tested on Ubuntu 22.04/24.04 with and without GPU support, and on macOS 12.3 without GPU support. Training hardware: Intel i7 with 256 GB RAM and 24 GB NVIDIA RTX 4090. Training took 6-7 h per model.
+
+There is no strict limit on the number or length of reference sequences, or on the number of off-target classes. However, memory for encoding and training can become a constraint depending on the available hardware.
+
+Each run writes a log with the full command line, random seed and the parameters of the simulated anomaly classes, for provenance.
 
 ## All command-line parameters
 
 | Parameter | For prediction | For modelling | Argument | Default | Description |
 |---|---:|---:|---|---|---|
-| `-query` | Required | Required | `<query.fasta>` | none | Query FASTA file containing amplicon sequences to be classified. |
-| `-p` | Required | Required | `<model_name>` | none | Project or model name. Used to load existing models or to name newly trained models and associated output files. |
-| `-db` | No | Required | `<ref.fasta>` | none | True target amplicon reference database in FASTA format. Required when training a new model. |
-| `-ot` | No | Optional | `<ot1.fasta>,<ot2.fasta>,...` | none | Comma-separated list of known off-target amplicon FASTA files. Each file is treated as a separate off-target class during model training. |
+| `-query` | Required | Required | `<query.fasta>` | none | Query FASTA file (plain or `.gz`) containing amplicon sequences to be classified. |
+| `-p` | Required | Required | `<model_name>` | none | Model name. Used to load existing models or to name newly trained models and associated output files. |
+| `-db` | No | Required | `<ref.fasta>` | none | Reference database of the target group in FASTA format (plain or `.gz`). Required when training a new model. |
+| `-ot` | No | Optional | `<ot1.fasta>,<ot2.fasta>,...` | none | Comma-separated list of known off-target amplicon FASTA files. Each file is a separate off-target class during training. |
 | `-2c` | No | Optional | none | `FALSE` | Switch from multiclass to binary classification. Deprecated. |
 | `-r` | No | Optional | none | `FALSE` | Recalibrate models by rerunning tuner-based hyperparameter optimization. |
-| `-e` | No | Optional | `<integer>` | `20` | Number of training epochs. |
+| `-e` | No | Optional | `<integer>` | `20` | Maximum number of training epochs (early stopping may end training earlier). |
 | `-v` | Optional | Optional | none | `FALSE` | Enable verbose mode. |
 | `-t` | Optional | Optional | `<integer>` | none | Number of processing threads. |
 | `-seed` | Optional | Optional | `<integer>` | none | Seed for randomization and reproducibility. |
 | `--target_len` | Optional | Optional | `<integer>` | estimated from data | Expected amplicon length. If not provided, the length is estimated from the input data. |
-| `--validate_models` | Optional | No | none | `FALSE` | Run validation sanity checks on pretrained models before prediction. |
+| `--validate_models` | Optional | No | none | `FALSE` | Run validation sanity checks on pre-trained models before prediction. |
 
 ## Output
 
-By default, the software retains all sequences in the query data but annotates them based on their classification from each of the three models in the output. However, an option for sequence removal is also available. The software generates two output files stored in the 'predictions' subfolder: a comma-separated file (CSV) presenting classification results in tabular format, and a second file containing flagged sequences (or a subset if removal is opted) in FASTA format.
+By default, all query sequences are retained and annotated with the classification of each of the three models (CNN, LSTM and the combined MetAnoDe model). Two output files are written to the subfolder `predictions`:
+
+* a CSV table with the classification results and prediction probabilities; the final class of each sequence is given by the combined model
+* a FASTA file with the flagged sequences (or the retained subset if removal is selected)
+
+Classes are the true class, the anomaly classes substitution, indel and chimera, and one class per off-target file given with `-ot` during training. MetAnoDe does not perform taxonomic assignment within the target group.
 
 ## R function to filter data
 
@@ -274,6 +253,36 @@ attr(ps_filt, "metanode_filter_params")
 * **Order of steps.** Apply this ASV-level filter alongside standard per-sample
   low-abundance filtering, not as a replacement for it.
 
+## Alternative installation: conda (for advanced users and developers)
+
+The conda installation gives direct access to the Python environment and source code, e.g. to modify, extend or debug MetAnoDe. For routine use, Docker is recommended. Package versions below match those in the Docker image.
+
+***Only for GPU support:*** *install, configure AND test NVIDIA drivers and CUDA*
+
+```sh
+conda create --name metanode python=3.11
+conda activate metanode
+
+conda install -c conda-forge \
+	numpy=1.23.5 \
+	pandas=2.2.1 \
+	scikit-learn=1.4.2 \
+	biopython=1.84 \
+	matplotlib=3.8.4
+
+python -m pip install \
+	tensorflow==2.17.0 \
+	keras==3.3.3 \
+	keras-tuner==1.4.7
+
+export KERAS_BACKEND=tensorflow
+```
+
+Usage (same arguments as the Docker version):
+
+```sh
+python metanode.py -query <query.fasta> -p <model_name>
+```
 
 ## License
 
