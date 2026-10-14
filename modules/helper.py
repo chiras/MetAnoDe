@@ -88,7 +88,7 @@ def save_model_metadata(
     model_dir = os.path.join("models", project_name)
     os.makedirs(model_dir, exist_ok=True)
     out_path = os.path.join(model_dir, "parameters.json")
-
+    
     with open(out_path, "w") as f:
         json.dump(metadata, f, indent=4)
 
@@ -186,7 +186,7 @@ def sample_dataframe(df, n):
 def upsample_dataframe(df, n):
     return df.sample(n=n, weights=df['sizes'], replace=True, random_state=42).reset_index(drop=True)
 
-def read_fasta(file_path, target, target2):
+def read_fasta(file_path, target, target2, reverse=False):
     sequences = []
     headers = []
     targets = []
@@ -205,6 +205,9 @@ def read_fasta(file_path, target, target2):
                     [char if char in 'ACGT' else 'N'
                      for char in str(record.seq).upper()]
                 )
+                # Optionally reverse the sequence (no complement)
+                if reverse:
+                    output_string = output_string[::-1]
                 sequences.append(output_string)
                 headers.append(str(record.id))
                 targets.append(int(target))

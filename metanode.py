@@ -25,6 +25,7 @@ parser.add_argument('-v', dest='verbose', action='store_true', required=False, h
 parser.add_argument('-t', dest='threads', required=False, help="Number of threads")
 parser.add_argument('-ot', dest='offtargets', required=False, help="Number of threads")
 parser.add_argument('-seed', dest='seed', required=False, help="Seed for randomization")
+parser.add_argument('-rv', dest='reverse_seqs', action='store_true', required=False, help="Reverse sequences", default=False)
 parser.add_argument(
     '--target_len',
     dest='target_len',
@@ -278,7 +279,7 @@ def split_dataset(dataset, test_ratio=0.25):
     test_indices = np.random.rand(len(dataset)) < test_ratio
     return dataset[~test_indices], dataset[test_indices]
 
-sequences_dict_query = helper.read_fasta(args.query_file, 99, 99)
+sequences_dict_query = helper.read_fasta(args.query_file, 99, 99, reverse=reverse_seqs)
 
 def _run_git(args, cwd):
     return subprocess.check_output(["git"] + args, cwd=cwd, stderr=subprocess.DEVNULL).decode().strip()
@@ -389,7 +390,7 @@ def filter_by_length(df, target_len, lower_factor=0.5, upper_factor=1.5):
     return df_filtered, stats
 
 def generate_balanced_dataset(args, balance_4C, labels, verbose=False):
-    sequences_dict_true = helper.read_fasta(args.true_file, 0, 0)
+    sequences_dict_true = helper.read_fasta(args.true_file, 0, 0, reverse=reverse_seqs)
     log(sequences_dict_true) if verbose else None
 
     # --- resolve target length ---
@@ -461,7 +462,7 @@ def generate_balanced_dataset(args, balance_4C, labels, verbose=False):
         sequences_dict_offtarget_all = pd.DataFrame()
 
         for offtarget in split_list:
-            sequences_dict_offtarget = helper.read_fasta(offtarget, 0, i)
+            sequences_dict_offtarget = helper.read_fasta(offtarget, 0, i, reverse=reverse_seqs)
             ot_len = len(sequences_dict_offtarget)
 
             if ot_len > max_rows:
@@ -564,12 +565,15 @@ if missing_files:
     os.makedirs(model_dir, exist_ok=True)
     os.makedirs(plots_dir, exist_ok=True)
     regenerate_models = True
+    if args.rv is not None:
+        reverse_seqs = bool(args.rv)
 
 else:
     regenerate_models = False
     log("")
     log(f"Using pretrained model: {args.project_name}")
     metadata = helper.load_model_metadata(project_name)
+    reverse_seqs = bool(metadata.get("reverse", False))
     labels = metadata["labels"]
     log(f"Classes: {labels}")
 
