@@ -222,6 +222,12 @@ else:
     balance_4C = False
     loss_func='binary_crossentropy' 
 
+
+if args.reverse_seqs is not None:
+    reverse_seqs = bool(args.reverse_seqs)
+else: 
+    reverse_seqs = False
+
 max_epoch = args.epochs
 max_epoch_ensemble=5
 max_epoch_tuner=5
@@ -273,11 +279,6 @@ model_exist_cnn = os.path.isfile(model_path_cnn)
 model_exist_lstm = os.path.isfile(model_path_lstm)
 token_exist = os.path.isfile(token_path)
 config_exist = os.path.isfile(config_path)
-
-if args.rv is not None:
-    reverse_seqs = bool(args.rv)
-else: 
-    reverse_seqs = False
 
 
 #
