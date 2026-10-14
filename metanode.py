@@ -274,6 +274,12 @@ model_exist_lstm = os.path.isfile(model_path_lstm)
 token_exist = os.path.isfile(token_path)
 config_exist = os.path.isfile(config_path)
 
+if args.rv is not None:
+    reverse_seqs = bool(args.rv)
+else: 
+    reverse_seqs = False
+
+
 #
 def split_dataset(dataset, test_ratio=0.25):
     test_indices = np.random.rand(len(dataset)) < test_ratio
@@ -565,10 +571,6 @@ if missing_files:
     os.makedirs(model_dir, exist_ok=True)
     os.makedirs(plots_dir, exist_ok=True)
     regenerate_models = True
-    if args.rv is not None:
-        reverse_seqs = bool(args.rv)
-    else: 
-        reverse_seqs = False
 
 else:
     regenerate_models = False
