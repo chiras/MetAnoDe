@@ -567,6 +567,8 @@ if missing_files:
     regenerate_models = True
     if args.rv is not None:
         reverse_seqs = bool(args.rv)
+    else: 
+        reverse_seqs = False
 
 else:
     regenerate_models = False
@@ -576,6 +578,9 @@ else:
     reverse_seqs = bool(metadata.get("reverse", False))
     labels = metadata["labels"]
     log(f"Classes: {labels}")
+
+if reverse_seqs:
+    log("Reversing sequences for training and prediction")
 
 
 # load in reference data
@@ -589,8 +594,7 @@ if regenerate_models:
         project_name=project_name,
         labels=labels,
         extra_metadata={
-            "offtargets": args.offtargets.split(",") if args.offtargets else []
-        }
+            "offtargets": args.offtargets.split(",") if args.offtargets else []       }
     )
 
     metadata = helper.load_model_metadata(project_name)
