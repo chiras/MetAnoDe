@@ -10,7 +10,7 @@ import subprocess
 import json
 import shlex
 
-print("EXPERIMENTAL VERSION: 20-Oct 9:35)
+print("EXPERIMENTAL VERSION: 20-Oct 9:35")
 
 start_time = time.time()
 
