@@ -473,12 +473,21 @@ def generate_balanced_dataset(args, balance_4C, labels, verbose=False):
     sequences_dict_true = helper.read_fasta(args.true_file, 0, 0, reverse=reverse_seqs)
     log(sequences_dict_true) if verbose else None
 
-    # --- resolve target length ---
-    target_len = resolve_target_len(
+    # target length: from the option, otherwise the median length of the true sequences
+    if args.target_len:
+        target_len = int(args.target_len)
+    else:
+        target_len = int(sequences_dict_true["sequences"].str.len().median())
+    lower_factor, upper_factor = (float(x) for x in args.len_factors.split(","))
+    sequences_dict_true, len_stats = filter_by_length(
         sequences_dict_true,
-        args.target_len,
-        log_fn=log
+        target_len,
+        lower_factor=lower_factor,
+        upper_factor=upper_factor
     )
+    log(f"Length filter: target {target_len} bp, factors {lower_factor}-{upper_factor} -> "
+        f"range [{len_stats['lower']}, {len_stats['upper']}], kept {len_stats['after_n']}/{len_stats['before_n']} "
+        f"(removed {len_stats['removed_n']})")
 
     # --- length filtering ---
     lower_factor, upper_factor = (float(x) for x in args.len_factors.split(","))
