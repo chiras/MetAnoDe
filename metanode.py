@@ -470,6 +470,7 @@ def filter_by_length(df, target_len, lower_factor=0.5, upper_factor=1.5):
     return df_filtered, stats
 
 def generate_balanced_dataset(args, balance_4C, labels, verbose=False):
+    global LENGTH_FILTER_STATS
     sequences_dict_true = helper.read_fasta(args.true_file, 0, 0, reverse=reverse_seqs)
     log(sequences_dict_true) if verbose else None
 
@@ -488,23 +489,7 @@ def generate_balanced_dataset(args, balance_4C, labels, verbose=False):
     log(f"Length filter: target {target_len} bp, factors {lower_factor}-{upper_factor} -> "
         f"range [{len_stats['lower']}, {len_stats['upper']}], kept {len_stats['after_n']}/{len_stats['before_n']} "
         f"(removed {len_stats['removed_n']})")
-
-    # --- length filtering ---
-    lower_factor, upper_factor = (float(x) for x in args.len_factors.split(","))
-
-    sequences_dict_true = filter_by_length(
-        sequences_dict_true,
-        args.target_len,          # as before (or the estimated target length)
-        lower_factor=lower_factor,
-        upper_factor=upper_factor
-    )
-
-    log(
-        f"Length filter applied: kept {length_filter_stats['after_n']}/"
-        f"{length_filter_stats['before_n']} "
-        f"(removed {length_filter_stats['removed_n']}) | "
-        f"range [{length_filter_stats['lower']}, {length_filter_stats['upper']}]"
-    )
+    LENGTH_FILTER_STATS = {"target_len": target_len, "factors": [lower_factor, upper_factor], **len_stats}
 
     log(f"\n")
     log(
