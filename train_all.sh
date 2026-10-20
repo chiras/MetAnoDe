@@ -11,6 +11,14 @@
 # Each model runs in its own container, one after another (each uses the whole GPU).
 # Files are written with your user and group, not root.
 ###############################################################################
+
+# USAGE EXAMPLES:
+#bash train_all.sh                          # all models
+#bash train_all.sh fungal_ITS2              # only selected ones (keys as in the script)
+#DRY_RUN=1 bash train_all.sh                # only print the commands
+#CHIMERA_MODE=legacy VERSION=m2.1legacy bash train_all.sh fungal_ITS2
+###############################################################################
+
 set -uo pipefail
 VERSION="${VERSION:-m2.1}"
 CHIMERA_MODE="${CHIMERA_MODE:-homologous}"
@@ -60,21 +68,28 @@ for m in "${MODELS[@]}"; do
   if [[ "$SKIP_EXISTING" == "1" ]] && grep -q "Ensemble" "models/$name/Stats.txt" 2>/dev/null; then
     echo "skip    $name (Ensemble report exists; SKIP_EXISTING=0 to retrain)" | tee -a "$SUMMARY"; continue
   fi
+
   cmd=(docker run --gpus all --rm
-       --user "$(id -u):$(id -g)" -e HOME=/tmp        # files owned by you, not root
        -v "$PWD":/data "$IMAGE"
        -db "$db" -ot "$ots" -p "$name" -query "$query"
        -e "$EPOCHS" -seed "$SEED"
        --len_factors "$lenf" --chimera_mode "$CHIMERA_MODE")
+
+
   echo "--- $(date '+%H:%M') $name" | tee -a "$SUMMARY"
   printf '%q ' "${cmd[@]}" | tee -a "$SUMMARY"; echo | tee -a "$SUMMARY"
   [[ "$DRY_RUN" == "1" ]] && continue
   log="train_logs/$name.$(date +%Y%m%d_%H%M%S).log"
   start=$(date +%s)
-  if "${cmd[@]}" > "$log" 2>&1; then
+  "${cmd[@]}" 2>&1 | tee "$log"
+  if [[ ${PIPESTATUS[0]} -eq 0 ]]; then
     echo "ok      $name ($(( ($(date +%s) - start) / 60 )) min) log: $log" | tee -a "$SUMMARY"
   else
     echo "FAILED  $name (see $log)" | tee -a "$SUMMARY"
   fi
+  
+  # hand the files written by the container (as root) back to the user
+  docker run --rm -v "$PWD":/data --entrypoint chown "$IMAGE" -R "$(id -u):$(id -g)" \
+    /data/models /data/splits /data/tuner /data/predictions 2>/dev/null || true
 done
 echo "=== done $(date '+%Y-%m-%d %H:%M')" | tee -a "$SUMMARY"
