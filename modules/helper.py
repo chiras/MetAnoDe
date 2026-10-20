@@ -296,6 +296,11 @@ def save_summary(model, history, best_hps, model_dir, model_component):
                     f"Val Accuracy: {history.history['val_accuracy'][epoch]}, "
                     f"Loss: {history.history['loss'][epoch]}, "
                     f"Val Loss: {history.history['val_loss'][epoch]}\n")
+
+def _mismatches(a, b):
+    """Positional mismatches over the shorter length, plus the length difference."""
+    n = min(len(a), len(b))
+    return sum(1 for i in range(n) if a[i] != b[i]) + abs(len(a) - len(b))
             
 def create_artificial_chimera(
     df,
