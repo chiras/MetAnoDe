@@ -51,6 +51,9 @@ parser.add_argument(
     action="store_true",
     help="Run validation sanity checks on pretrained models"
 )
+parser.add_argument("--len_factors", dest="len_factors", default="0.75,1.25",
+                    help="Length filter for the true sequences as factors of the target length (lower,upper). "
+                         "Length-variable markers (fungal ITS) need a wider range, e.g. 0.5,1.5")
 
 args = parser.parse_args()
 project_name=args.project_name
@@ -478,11 +481,13 @@ def generate_balanced_dataset(args, balance_4C, labels, verbose=False):
     )
 
     # --- length filtering ---
-    sequences_dict_true, length_filter_stats = filter_by_length(
+    lower_factor, upper_factor = (float(x) for x in args.len_factors.split(","))
+
+    sequences_dict_true = filter_by_length(
         sequences_dict_true,
-        target_len=target_len,
-        lower_factor=0.75,
-        upper_factor=1.25
+        args.target_len,          # as before (or the estimated target length)
+        lower_factor=lower_factor,
+        upper_factor=upper_factor
     )
 
     log(
