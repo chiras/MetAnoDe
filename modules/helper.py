@@ -297,11 +297,14 @@ def save_summary(model, history, best_hps, model_dir, model_component):
                     f"Loss: {history.history['loss'][epoch]}, "
                     f"Val Loss: {history.history['val_loss'][epoch]}\n")
 
+
+
 def _mismatches(a, b):
     """Positional mismatches over the shorter length, plus the length difference."""
     n = min(len(a), len(b))
     return sum(1 for i in range(n) if a[i] != b[i]) + abs(len(a) - len(b))
-            
+
+
 def create_artificial_chimera(
     df,
     num_sequences,
@@ -317,6 +320,9 @@ def create_artificial_chimera(
     min_diff_abs=8,
     index_step=3,
     index_max_seqs=30000,
+    min_parent_div=0.10,
+    max_anchor_shift=0.02,
+    max_parent_div=0.40,
 ):
     """
     Create artificial chimeras with length filtering and diagnostics.
@@ -332,6 +338,13 @@ def create_artificial_chimera(
       - The chimera must differ from BOTH parents by at least max(min_diff_abs, min_diff_frac *
         length) positions; otherwise it is practically identical to a true sequence and would
         carry a contradictory label.
+      - The two parents must differ by at least min_parent_div (fraction, anchored at the junction).
+        Chimeras of close relatives (e.g. congeners a few percent apart) look like genuine sequences of
+        unsampled taxa and cannot be separated from true sequences; with distant parents, the two halves
+        point to different lineages, which is the detectable signal.
+      - Parents more than max_parent_div apart are rejected: at such divergence a shared 12-mer at a
+        similar position is mostly coincidental (non-homologous), and PCR chimeras between such
+        distant templates are rare.
     mode="legacy": previous behaviour (independent cuts in both parents, 25-75% each), which
       typically produces duplicated or missing segments at the junction.
     """
@@ -352,7 +365,8 @@ def create_artificial_chimera(
     if log_fn:
         log_fn(f"Chimera settings | mode={mode}, orig_min={orig_min}, orig_max={orig_max}, "
                f"target={target_len}, final_min={min_len}, final_max={max_len}"
-               + (f", anchor_k={anchor_k}, min_diff=max({min_diff_abs}, {min_diff_frac:.0%})"
+               + (f", anchor_k={anchor_k}, min_diff=max({min_diff_abs}, {min_diff_frac:.0%}), "
+                  f"parent_div={min_parent_div:.0%}-{max_parent_div:.0%}, max_anchor_shift={max_anchor_shift:.0%}"
                   if mode == "homologous" else ""))
 
     chimera_headers, chimera_sequences, chimera_lengths = [], [], []
@@ -360,7 +374,8 @@ def create_artificial_chimera(
     n_seq = len(sequences)
     attempts = 0
     max_attempts = max(num_sequences * max_attempt_factor, 1000)
-    rejected = {"no_anchor": 0, "too_similar": 0, "length": 0, "short_parent": 0}
+    rejected = {"no_anchor": 0, "too_similar": 0, "parents_too_similar": 0, "parents_too_distant": 0, "length": 0, "short_parent": 0}
+    parent_divs = []
 
     kmer_index = {}
     if mode == "homologous":
@@ -407,7 +422,9 @@ def create_artificial_chimera(
                 len2 = len(seq2)
                 q = seq2.find(anchor)
                 # unique in parent 2, and near the corresponding relative position (homologous site)
-                if q < 0 or seq2.find(anchor, q + 1) >= 0 or abs(q / len2 - p / len1) > 0.15:
+                # unique in parent 2 and at a similar relative position (max_anchor_shift): otherwise the
+                # motif is not homologous and the junction would duplicate or drop a segment
+                if q < 0 or seq2.find(anchor, q + 1) >= 0 or abs(q / len2 - p / len1) > max_anchor_shift:
                     continue
                 cand = seq1[:p] + seq2[q:]
                 # difference to parent 1: donated part vs. parent 1's own continuation;
@@ -418,6 +435,14 @@ def create_artificial_chimera(
                 if d1 < need or d2 < need:
                     why = "too_similar"
                     continue
+                # divergence between the parents, anchored at the junction (retained + donated part)
+                pdiv = (d1 + d2) / max(1, len(cand))
+                if pdiv < min_parent_div:
+                    why = "parents_too_similar"
+                    continue
+                if pdiv > max_parent_div:
+                    why = "parents_too_distant"
+                    continue
                 chim = cand
                 break
             if chim is None:
@@ -427,6 +452,8 @@ def create_artificial_chimera(
         if not (min_len <= len(chim) <= max_len):
             rejected["length"] += 1
             continue
+        if mode == "homologous":
+            parent_divs.append(pdiv)
         chimera_headers.append(f"art-chim_{headers[idx1]}_{headers[idx2]}")
         chimera_sequences.append(chim)
         chimera_lengths.append(len(chim))
@@ -437,6 +464,11 @@ def create_artificial_chimera(
             f"after {attempts} attempts (rejected: {rejected}). For mode='homologous', a smaller anchor_k "
             f"or a larger max_attempt_factor helps with very diverse reference sets.")
 
+    if log_fn and parent_divs:
+        pd_sorted = sorted(parent_divs)
+        q = lambda f: pd_sorted[int(f * (len(pd_sorted) - 1))]
+        log_fn(f"Chimera parent divergence | min={q(0):.3f}, q25={q(.25):.3f}, median={q(.5):.3f}, "
+               f"q75={q(.75):.3f}, max={q(1):.3f} (allowed {min_parent_div}-{max_parent_div})")
     if log_fn:
         log_fn(f"Chimera output stats | generated_min={min(chimera_lengths)}, generated_max={max(chimera_lengths)}, "
                f"mean={int(sum(chimera_lengths) / len(chimera_lengths))}, attempts={attempts}, rejected={rejected}")
@@ -448,6 +480,7 @@ def create_artificial_chimera(
         "Target4D": [chimera_target4d] * num_sequences,
         "sizes": [chimera_size] * num_sequences,
     })
+
 
 def create_artificial_errorate(df, num_sequences, typeerror):
     headers = df['headers'].tolist()
