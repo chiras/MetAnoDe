@@ -10,7 +10,7 @@ import subprocess
 import json
 import shlex
 
-print("EXPERIMENTAL VERSION: 2024-06-10")
+print("EXPERIMENTAL VERSION: 20-Oct 9:35)
 
 start_time = time.time()
 
@@ -299,7 +299,7 @@ max_epoch_ensemble=5
 max_epoch_tuner=5
 learning_rate=0.0003
 # training settings (recorded in parameters.json under "training_run")
-EARLY_STOP_PATIENCE = 8
+EARLY_STOP_PATIENCE = 10
 REDUCE_LR = {"monitor": "val_loss", "factor": 0.5, "patience": 3, "min_lr": 1e-5}
 LSTM_CLIPNORM = 0.5          # must match model_builders.LSTMHyperModel
 opt = keras.optimizers.Adam(learning_rate=learning_rate) # ensemble only
