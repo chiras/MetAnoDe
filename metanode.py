@@ -26,6 +26,10 @@ parser.add_argument('-t', dest='threads', required=False, help="Number of thread
 parser.add_argument('-ot', dest='offtargets', required=False, help="Number of threads")
 parser.add_argument('-seed', dest='seed', required=False, help="Seed for randomization")
 parser.add_argument('-rv', dest='reverse_seqs', action='store_true', required=False, help="Reverse sequences", default=False)
+parser.add_argument("--chimera_mode", dest="chimera_mode", choices=["homologous", "legacy"],
+                    default="homologous",
+                    help="Training chimeras: 'homologous' (junction at a shared anchor, minimum difference "
+                         "to both parents; revision 1) or 'legacy' (independent cuts, previous behaviour)")
 parser.add_argument(
     '--target_len',
     dest='target_len',
@@ -444,7 +448,8 @@ def generate_balanced_dataset(args, balance_4C, labels, verbose=False):
         sequences_dict_true,
         max_rows,
         target_len=target_len,
-        log_fn=log
+        log_fn=log, 
+        mode=args.chimera_mode
     )
     log(f"Created {len(sequences_dict_f3_balanced)} artifical chimeric sequences (Class 3) | {length_stats_str(sequences_dict_f3_balanced)}")
 
@@ -596,7 +601,8 @@ if regenerate_models:
     helper.save_model_metadata(
         project_name=project_name,
         labels=labels,
-        extra_metadata={
+        extra_metadata={"chimera_mode": args.chimera_mode,
+            "chimera_min_diff": {"frac": 0.03, "abs": 8},
             "offtargets": args.offtargets.split(",") if args.offtargets else []       }
     )
 
