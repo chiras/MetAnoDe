@@ -21,3 +21,7 @@ splits/*.csv.gz
 models/*_cache.npz
 modules/data_extraction
 models/*
+data.old
+data.old/*
+tier3*
+*.bak*
