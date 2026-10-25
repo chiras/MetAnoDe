@@ -14,6 +14,16 @@
 #                      these. By default they are removed regardless of
 #                      abundance (remove_offtarget_always = TRUE).
 #
+# Class labels
+# ------------
+# MetAnoDe labels the true class "true" and the error classes "substitution",
+# "indel" and "chimera"; every other class is an off-target class, labelled
+# after its training file (e.g. "16S.chloroplast.trim.2.derep"). With
+# offtarget_labels = NULL (default), all classes that are neither true nor an
+# error class are treated as off-target. Given offtarget_labels are matched
+# exactly or as part of the label, ignoring case ("chloroplast" matches
+# "16S.chloroplast.trim.2.derep").
+#
 # Note: chimeras and systematic errors from abundant parents can be recurrent
 # across samples. The conservative rule will keep some of these. This is the
 # accepted trade-off of the conservative mode.
@@ -65,8 +75,7 @@
 # # Conservative for error classes, off-target always removed (recommended)
 # ps_filt <- metanode_filter(ps, "predictions/run_Ensemble.query.csv",
 #                            abundance_threshold = 0.01,
-#                            prevalence_threshold = 0.02,
-#                            offtarget_labels = c("chloroplast", "mitochondria"))
+#                            prevalence_threshold = 0.02)       # off-target classes detected automatically
 #
 # # Remove all flagged taxa
 # ps_filt <- metanode_filter(ps, meta,
@@ -135,8 +144,9 @@ metanode_filter_decide <- function(
     class_vec,                     # named character vector: names = taxa IDs
     abundance_threshold = 0.01,
     prevalence_threshold = 0.02,
-    true_label = "EN_positive",
-    offtarget_labels = NULL,
+    true_label = "true",
+    offtarget_labels = NULL,       # NULL: all classes that are neither true nor error classes
+    error_labels = c("substitution", "indel", "chimera"),
     remove_offtarget_always = TRUE,
     use_nonzero_median = TRUE,
     rel_tol = 1e-6,
@@ -178,23 +188,44 @@ metanode_filter_decide <- function(
   # --- class groups ------------------------------------------------------
   observed <- unique(pred[!is.na(pred)])
   if (!true_label %in% observed) {
-    warning("true_label '", true_label, "' does not occur in the predictions. ",
-            "Check `true_label`; otherwise every matched taxon counts as flagged.")
+    # older MetAnoDe versions labelled the true class differently
+    alt <- intersect(c("true", "EN_positive", "positive"), observed)
+    if (length(alt) == 1) {
+      if (verbose) message("true_label '", true_label, "' not found; using '", alt, "' found in the predictions.")
+      true_label <- alt
+    } else {
+      warning("true_label '", true_label, "' does not occur in the predictions. ",
+              "Check `true_label`; otherwise every matched taxon counts as flagged. Labels found: ",
+              paste(observed, collapse = ", "))
+    }
   }
-  missing_ot <- setdiff(offtarget_labels, observed)
-  if (length(missing_ot) > 0 && verbose) {
-    message("Off-target labels not present in predictions: ",
-            paste(missing_ot, collapse = ", "))
+  other <- setdiff(observed, c(true_label, error_labels))
+  if (is.null(offtarget_labels)) {
+    # off-target classes: everything that is neither the true class nor an error class
+    ot_found <- other
+    if (verbose && length(ot_found)) message("Off-target classes (detected): ", paste(ot_found, collapse = ", "))
+  } else {
+    # exact or partial match, ignoring case (e.g. "chloroplast" -> "16S.chloroplast.trim.2.derep")
+    hit <- function(lbl) any(tolower(lbl) == tolower(offtarget_labels)) ||
+      any(vapply(offtarget_labels, function(o) grepl(tolower(o), tolower(lbl), fixed = TRUE), logical(1)))
+    ot_found <- observed[vapply(observed, hit, logical(1))]
+    ot_found <- setdiff(ot_found, c(true_label, error_labels))
+    missing_ot <- offtarget_labels[!vapply(offtarget_labels, function(o)
+      any(grepl(tolower(o), tolower(observed), fixed = TRUE)), logical(1))]
+    if (length(missing_ot) > 0 && verbose) {
+      message("Off-target labels not present in predictions: ", paste(missing_ot, collapse = ", "))
+    }
+    unassigned <- setdiff(other, ot_found)
+    if (length(unassigned) > 0) {
+      warning("Classes neither true, error nor listed as off-target are treated as error classes: ",
+              paste(unassigned, collapse = ", "))
+    }
   }
-  if (is.null(offtarget_labels) && remove_offtarget_always) {
-    warning("No offtarget_labels given: all non-true classes are treated as ",
-            "error classes, so off-target taxa are only removed if rare. Labels found: ",
-            paste(observed, collapse = ", "))
-  }
+  offtarget_labels_used <- ot_found
 
   group <- ifelse(is.na(pred), "unmatched",
            ifelse(pred == true_label, "true",
-           ifelse(pred %in% offtarget_labels, "offtarget", "error")))
+           ifelse(pred %in% offtarget_labels_used, "offtarget", "error")))
 
   # --- prevalence and abundance -----------------------------------------
   type <- .mnf_detect_type(otu_mat, rel_tol)
@@ -254,6 +285,8 @@ metanode_filter_decide <- function(
     prevalence_threshold = prevalence_threshold,
     true_label = true_label,
     offtarget_labels = offtarget_labels,
+    offtarget_labels_used = offtarget_labels_used,
+    error_labels = error_labels,
     remove_offtarget_always = remove_offtarget_always,
     use_nonzero_median = use_nonzero_median,
     strip_size = strip_size,
@@ -284,9 +317,10 @@ metanode_filter <- function(
     abundance_threshold = 0.01,
     prevalence_threshold = 0.02,
     class_col = "EN_class",
-    true_label = "EN_positive",
+    true_label = "true",
     id_col = "headers",
-    offtarget_labels = NULL,       # MetAnoDe labels of off-target classes
+    offtarget_labels = NULL,       # NULL: detected automatically (neither true nor error class)
+    error_labels = c("substitution", "indel", "chimera"),
     remove_offtarget_always = TRUE,
     use_nonzero_median = TRUE,
     rel_tol = 1e-6,
@@ -320,6 +354,7 @@ metanode_filter <- function(
     prevalence_threshold = prevalence_threshold,
     true_label = true_label,
     offtarget_labels = offtarget_labels,
+    error_labels = error_labels,
     remove_offtarget_always = remove_offtarget_always,
     use_nonzero_median = use_nonzero_median,
     rel_tol = rel_tol,
