@@ -357,7 +357,8 @@ def split_dataset(dataset, test_ratio=0.25):
     test_indices = np.random.rand(len(dataset)) < test_ratio
     return dataset[~test_indices], dataset[test_indices]
 
-sequences_dict_query = helper.read_fasta(args.query_file, 99, 99, reverse=reverse_seqs)
+# query read in its original orientation; reversal for reversed models happens at encoding
+sequences_dict_query = helper.read_fasta(args.query_file, 99, 99, reverse=False)
 
 def _run_git(args, cwd):
     return subprocess.check_output(["git"] + args, cwd=cwd, stderr=subprocess.DEVNULL).decode().strip()
@@ -911,10 +912,14 @@ log(f"Modeling {final_dim} Classes")
 log(f"Class labels: {labels}")
 log(f"Epochs: {max_epoch}")
 
-
 # prepare query
 X_query_final = sequences_dict_query.drop(columns=['headers','Target','Target4D','sizes'])  # Features
 X_query_list = X_query_final['sequences'].tolist()
+if reverse_seqs:
+    # model trained on reversed sequences (-rv at training, "reverse" in parameters.json):
+    # the model sees the reversed query, the output table keeps the original orientation
+    X_query_list = [s[::-1] for s in X_query_list]
+    log("Query reversed for the model (trained on reversed sequences)")
 X_query_encoded = encoder.texts_to_sequences(X_query_list)
 X_query_encoded = keras.preprocessing.sequence.pad_sequences(
     X_query_encoded,
