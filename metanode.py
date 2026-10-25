@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd 
 import subprocess
 import json
+import shlex
 
 start_time = time.time()
 
@@ -17,11 +18,16 @@ parser.add_argument('-query', dest='query_file', required=True, help="Amplicon d
 parser.add_argument('-p', dest='project_name', required=True, help="Model name")
 parser.add_argument('-2c', dest='two_classes', action='store_true', required=False, help="Switch from multiclass to binary (DEPRECEATED)")
 parser.add_argument('-r', dest='recalibrate', action='store_true', required=False, help="Switch to tuner recalibration")
-parser.add_argument('-e', dest='epochs', required=False, default=20, help="change epochs from 20 to other value")
+parser.add_argument('-e', dest='epochs', required=False, type=int, default=20, help="change epochs from 20 to other value")
 parser.add_argument('-v', dest='verbose', action='store_true', required=False, help="Switch to verbose mode")
 parser.add_argument('-t', dest='threads', required=False, help="Number of threads")
 parser.add_argument('-ot', dest='offtargets', required=False, help="Number of threads")
 parser.add_argument('-seed', dest='seed', required=False, help="Seed for randomization")
+parser.add_argument('-rv', dest='reverse_seqs', action='store_true', required=False, help="Reverse sequences", default=False)
+parser.add_argument("--chimera_mode", dest="chimera_mode", choices=["homologous", "legacy"],
+                    default="homologous",
+                    help="Training chimeras: 'homologous' (junction at a shared anchor, minimum difference "
+                         "to both parents; revision 1) or 'legacy' (independent cuts, previous behaviour)")
 parser.add_argument(
     '--target_len',
     dest='target_len',
@@ -31,13 +37,26 @@ parser.add_argument(
     help="Expected amplicon length. If not set, estimated from data."
 )
 parser.add_argument(
+    "--cnn_input",
+    dest="cnn_input",
+    choices=["embedding", "numeric"],
+    default="embedding",
+    help="CNN input for new models: 'embedding' (learned nucleotide vectors, revision 1 default) or "
+         "'numeric' (integer codes as one channel, previous behaviour). Pretrained models keep their own input."
+)
+parser.add_argument(
     "--validate_models",
     action="store_true",
     help="Run validation sanity checks on pretrained models"
 )
+parser.add_argument("--len_factors", dest="len_factors", default="0.75,1.25",
+                    help="Length filter for the true sequences as factors of the target length (lower,upper). "
+                         "Length-variable markers (fungal ITS) need a wider range, e.g. 0.5,1.5")
 
 args = parser.parse_args()
-project_name=args.project_name 
+project_name=args.project_name
+model_dir = os.path.join("models", project_name)
+plots_dir = os.path.join(model_dir, "plots")
 
 # Silence TF/absl startup noise , settings for training consistencies
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")   # TF C++ logs
@@ -96,7 +115,8 @@ from sklearn.model_selection import train_test_split
 
 # logging on command line and to file
 timestamp = time.strftime("%Y%m%d.%H%M%S")
-log_dir = "logs"  # <- relative; outside Docker it lands in ./logs, inside Docker in /data/logs
+# training runs (-db given): log next to the model; prediction runs: next to the predictions
+log_dir = os.path.join(model_dir, "logs") if args.true_file else "predictions"
 os.makedirs(log_dir, exist_ok=True)
 logfile_path = os.path.join(log_dir, f"{project_name}.{timestamp}.log")
 
@@ -117,6 +137,62 @@ def log(msg: str):
     except Exception:
         # don't crash training because logging failed
         pass
+    
+def file_sha256(path):
+    """SHA-256 of a file (None if missing); identifies the exact training input."""
+    import hashlib
+    if not path or not os.path.isfile(path):
+        return None
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def count_fasta_records(path):
+    """Number of FASTA records (plain or gzip)."""
+    import gzip
+    if not path or not os.path.isfile(path):
+        return None
+    opener = gzip.open if path.endswith(".gz") else open
+    with opener(path, "rt") as f:
+        return sum(1 for line in f if line.startswith(">"))
+
+
+def code_files():
+    """Source files that define the models and the training classes."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    return {"metanode.py": os.path.abspath(__file__),
+            "helper.py": os.path.join(here, "modules", "helper.py"),
+            "model_builders.py": os.path.join(here, "modules", "model_builders.py")}
+
+
+def environment_versions():
+    import platform
+    out = {"python": platform.python_version()}
+    for mod in ("tensorflow", "keras", "keras_tuner", "numpy", "pandas", "sklearn"):
+        try:
+            out[mod] = __import__(mod).__version__
+        except Exception:
+            out[mod] = None
+    return out
+
+
+def update_model_metadata(project_name, updates):
+    """Merge updates into models/<project>/parameters.json (existing keys kept)."""
+    path = os.path.join("models", project_name, "parameters.json")
+    meta = {}
+    if os.path.isfile(path):
+        with open(path) as f:
+            meta = json.load(f)
+    meta.update(updates)
+    with open(path, "w") as f:
+        json.dump(meta, f, indent=4, default=str)
+
+
+command_line = " ".join(shlex.quote(arg) for arg in sys.argv)
+log(f"Command: {command_line}")
 
 log(f"Random seed: {SEED}")
 
@@ -213,10 +289,20 @@ else:
     balance_4C = False
     loss_func='binary_crossentropy' 
 
+
+if args.reverse_seqs is not None:
+    reverse_seqs = bool(args.reverse_seqs)
+else: 
+    reverse_seqs = False
+
 max_epoch = args.epochs
 max_epoch_ensemble=5
 max_epoch_tuner=5
 learning_rate=0.0003
+# training settings (recorded in parameters.json under "training_run")
+EARLY_STOP_PATIENCE = 10
+REDUCE_LR = {"monitor": "val_loss", "factor": 0.5, "patience": 3, "min_lr": 1e-5}
+LSTM_CLIPNORM = 0.5          # must match model_builders.LSTMHyperModel
 opt = keras.optimizers.Adam(learning_rate=learning_rate) # ensemble only
 
 SPLIT_DIR = "splits"
@@ -245,18 +331,19 @@ else:
 
 # check existing models:
 
-model_name_en= f"{project_name}_Ensemble"
-model_path_en = f"models/{model_name_en}.keras"
-model_name_cnn= f"{project_name}_CNN"
-model_path_cnn = f"models/{model_name_cnn}.keras"
-model_name_lstm= f"{project_name}_LSTM"
-model_path_lstm = f"models/{model_name_lstm}.keras"
-token_path = f"models/{model_name_en}.token"
-config_path = f"models/{model_name_en}.config"
+model_name_en = f"{project_name}_Ensemble"
+model_name_cnn = f"{project_name}_CNN"
+model_name_lstm = f"{project_name}_LSTM"
 
-hp_override_path = f"models/{project_name}.hyperparameters.json"
-hp_override_cnn_path = f"models/{project_name}_CNN.hyperparameters.json"
-hp_override_lstm_path = f"models/{project_name}_LSTM.hyperparameters.json"
+model_path_en = os.path.join(model_dir, "Ensemble.keras")
+model_path_cnn = os.path.join(model_dir, "CNN.keras")
+model_path_lstm = os.path.join(model_dir, "LSTM.keras")
+token_path = os.path.join(model_dir, "Ensemble.token")
+config_path = os.path.join(model_dir, "Ensemble.config")
+
+hp_override_path = os.path.join(model_dir, "hyperparameters.json")
+hp_override_cnn_path = os.path.join(model_dir, "CNN.hyperparameters.json")
+hp_override_lstm_path = os.path.join(model_dir, "LSTM.hyperparameters.json")
 
 model_exist_en = os.path.isfile(model_path_en)
 model_exist_cnn = os.path.isfile(model_path_cnn)
@@ -264,12 +351,14 @@ model_exist_lstm = os.path.isfile(model_path_lstm)
 token_exist = os.path.isfile(token_path)
 config_exist = os.path.isfile(config_path)
 
+
 #
 def split_dataset(dataset, test_ratio=0.25):
     test_indices = np.random.rand(len(dataset)) < test_ratio
     return dataset[~test_indices], dataset[test_indices]
 
-sequences_dict_query = helper.read_fasta(args.query_file, 99, 99)
+# query read in its original orientation; reversal for reversed models happens at encoding
+sequences_dict_query = helper.read_fasta(args.query_file, 99, 99, reverse=False)
 
 def _run_git(args, cwd):
     return subprocess.check_output(["git"] + args, cwd=cwd, stderr=subprocess.DEVNULL).decode().strip()
@@ -380,30 +469,26 @@ def filter_by_length(df, target_len, lower_factor=0.5, upper_factor=1.5):
     return df_filtered, stats
 
 def generate_balanced_dataset(args, balance_4C, labels, verbose=False):
-    sequences_dict_true = helper.read_fasta(args.true_file, 0, 0)
+    global LENGTH_FILTER_STATS
+    sequences_dict_true = helper.read_fasta(args.true_file, 0, 0, reverse=reverse_seqs)
     log(sequences_dict_true) if verbose else None
 
-    # --- resolve target length ---
-    target_len = resolve_target_len(
+    # target length: from the option, otherwise the median length of the true sequences
+    if args.target_len:
+        target_len = int(args.target_len)
+    else:
+        target_len = int(sequences_dict_true["sequences"].str.len().median())
+    lower_factor, upper_factor = (float(x) for x in args.len_factors.split(","))
+    sequences_dict_true, len_stats = filter_by_length(
         sequences_dict_true,
-        args.target_len,
-        log_fn=log
+        target_len,
+        lower_factor=lower_factor,
+        upper_factor=upper_factor
     )
-
-    # --- length filtering ---
-    sequences_dict_true, length_filter_stats = filter_by_length(
-        sequences_dict_true,
-        target_len=target_len,
-        lower_factor=0.75,
-        upper_factor=1.25
-    )
-
-    log(
-        f"Length filter applied: kept {length_filter_stats['after_n']}/"
-        f"{length_filter_stats['before_n']} "
-        f"(removed {length_filter_stats['removed_n']}) | "
-        f"range [{length_filter_stats['lower']}, {length_filter_stats['upper']}]"
-    )
+    log(f"Length filter: target {target_len} bp, factors {lower_factor}-{upper_factor} -> "
+        f"range [{len_stats['lower']}, {len_stats['upper']}], kept {len_stats['after_n']}/{len_stats['before_n']} "
+        f"(removed {len_stats['removed_n']})")
+    LENGTH_FILTER_STATS = {"target_len": target_len, "factors": [lower_factor, upper_factor], **len_stats}
 
     log(f"\n")
     log(
@@ -427,7 +512,8 @@ def generate_balanced_dataset(args, balance_4C, labels, verbose=False):
         sequences_dict_true,
         max_rows,
         target_len=target_len,
-        log_fn=log
+        log_fn=log, 
+        mode=args.chimera_mode
     )
     log(f"Created {len(sequences_dict_f3_balanced)} artifical chimeric sequences (Class 3) | {length_stats_str(sequences_dict_f3_balanced)}")
 
@@ -452,7 +538,7 @@ def generate_balanced_dataset(args, balance_4C, labels, verbose=False):
         sequences_dict_offtarget_all = pd.DataFrame()
 
         for offtarget in split_list:
-            sequences_dict_offtarget = helper.read_fasta(offtarget, 0, i)
+            sequences_dict_offtarget = helper.read_fasta(offtarget, 0, i, reverse=reverse_seqs)
             ot_len = len(sequences_dict_offtarget)
 
             if ot_len > max_rows:
@@ -509,11 +595,12 @@ def generate_balanced_dataset(args, balance_4C, labels, verbose=False):
 # ------------------------------------------------------------------
 
 required_files = [
-    f"models/{args.project_name}_CNN.keras",
-    f"models/{args.project_name}_LSTM.keras",
-    f"models/{args.project_name}_Ensemble.keras",
-    f"models/{args.project_name}_Ensemble.config",
-    f"models/{args.project_name}_Ensemble.token",
+    os.path.join(model_dir, "CNN.keras"),
+    os.path.join(model_dir, "LSTM.keras"),
+    os.path.join(model_dir, "Ensemble.keras"),
+    os.path.join(model_dir, "Ensemble.config"),
+    os.path.join(model_dir, "Ensemble.token"),
+    os.path.join(model_dir, "parameters.json"),
 ]
 
 missing_files = [f for f in required_files if not os.path.exists(f)]
@@ -551,6 +638,8 @@ if missing_files:
     log("Not all required models/configs available.")
     log("Regenerating missing components...")
     log("")
+    os.makedirs(model_dir, exist_ok=True)
+    os.makedirs(plots_dir, exist_ok=True)
     regenerate_models = True
 
 else:
@@ -558,8 +647,12 @@ else:
     log("")
     log(f"Using pretrained model: {args.project_name}")
     metadata = helper.load_model_metadata(project_name)
+    reverse_seqs = bool(metadata.get("reverse", False))
     labels = metadata["labels"]
     log(f"Classes: {labels}")
+
+if reverse_seqs:
+    log("Reversing sequences for training and prediction")
 
 
 # load in reference data
@@ -572,11 +665,42 @@ if regenerate_models:
     helper.save_model_metadata(
         project_name=project_name,
         labels=labels,
-        extra_metadata={
-            "offtargets": args.offtargets.split(",") if args.offtargets else []
-        }
+        extra_metadata={"chimera_mode": args.chimera_mode,
+            "chimera_min_diff": {"frac": 0.03, "abs": 8},
+            "offtargets": args.offtargets.split(",") if args.offtargets else [],
+            "reverse": bool(reverse_seqs),
+            "cnn_input": args.cnn_input}
     )
+    # full record of this training run, completed after training and written to parameters.json
+    run_record = {
+        "command_line": command_line,
+        "started": timestamp,
+        "seed": SEED,
+        "git": {"commit_short": short, "commit_full": full, "count": count, "source": src},
+        "environment": environment_versions(),
+        "code_sha256": {name: file_sha256(path) for name, path in code_files().items()},
+        "inputs": {
+            "true_file": {"path": args.true_file, "sha256": file_sha256(args.true_file),
+                          "records": count_fasta_records(args.true_file)},
+            "offtargets": [{"path": f, "sha256": file_sha256(f), "records": count_fasta_records(f)}
+                           for f in (args.offtargets.split(",") if args.offtargets else [])],
+        },
+        "data": {"target_len_arg": args.target_len, "length_filter_factors": [0.75, 1.25],
+                 "reverse": bool(reverse_seqs), "validation_fraction": 0.25},
+        "classes": {"balance_4C": bool(balance_4C), "loss": loss_func,
+                    "chimera": {"mode": args.chimera_mode, "min_diff_frac": 0.03, "min_diff_abs": 8},
+                    "simulation": getattr(helper, "SIMULATION_PARAMETERS", "not exposed by helper (see code_sha256)")},
+        "training": {"max_epochs": max_epoch, "max_epochs_tuner": max_epoch_tuner,
+                     "max_epochs_ensemble": max_epoch_ensemble, "batch_size": 64, "batch_size_ensemble": 16,
+                     "early_stopping_patience": EARLY_STOP_PATIENCE, "reduce_lr_on_plateau": REDUCE_LR,
+                     "lstm_clipnorm": LSTM_CLIPNORM, "ensemble_learning_rate": learning_rate,
+                     "tuner": "Hyperband (factor 3, objective val_accuracy)", "tuner_overwrite": bool(args.recalibrate),
+                     "threads": args.threads},
+        "models": {},
+    }
 
+    metadata = helper.load_model_metadata(project_name)
+    
     SPLIT_DIR = "splits"
     config = {}
     if helper.split_files_exist(project_name, SPLIT_DIR):
@@ -635,6 +759,14 @@ if regenerate_models:
         log(f"Split metadata: {split_meta}")
 
     log(X_train_balanced) if verbose else None
+    _ycol = "Target4D" if balance_4C else "Target"
+    run_record["data"].update({
+        "max_len": int(config["max_len"]),
+        "n_train": int(len(X_train_balanced)), "n_valid": int(len(X_valid_balanced)),
+        "per_class_train": {str(k): int(v) for k, v in X_train_balanced[_ycol].value_counts().sort_index().items()},
+        "per_class_valid": {str(k): int(v) for k, v in X_valid_balanced[_ycol].value_counts().sort_index().items()},
+        "split_reused": bool(helper.split_files_exist(project_name, SPLIT_DIR)),
+    })
 
     # Separate Features from Labels
     X_train_final = X_train_balanced.drop(columns=['headers','Target','Target4D','sizes'])  # Features
@@ -740,7 +872,7 @@ if regenerate_models:
             config = pickle.load(file)
 
     # --- Save a small validation cache for future loaded-model runs ---
-    val_cache_path = f"models/{project_name}_val_cache.npz"
+    val_cache_path = os.path.join(model_dir, "val_cache.npz")
     try:
         # keep it compact (optionally subsample)
         np.savez_compressed(
@@ -780,10 +912,14 @@ log(f"Modeling {final_dim} Classes")
 log(f"Class labels: {labels}")
 log(f"Epochs: {max_epoch}")
 
-
 # prepare query
 X_query_final = sequences_dict_query.drop(columns=['headers','Target','Target4D','sizes'])  # Features
 X_query_list = X_query_final['sequences'].tolist()
+if reverse_seqs:
+    # model trained on reversed sequences (-rv at training, "reverse" in parameters.json):
+    # the model sees the reversed query, the output table keeps the original orientation
+    X_query_list = [s[::-1] for s in X_query_list]
+    log("Query reversed for the model (trained on reversed sequences)")
 X_query_encoded = encoder.texts_to_sequences(X_query_list)
 X_query_encoded = keras.preprocessing.sequence.pad_sequences(
     X_query_encoded,
@@ -795,27 +931,37 @@ X_query_padded = np.array(X_query_encoded)
 
 
 model_name= f"{project_name}_CNN"
-model_path = f"models/{model_name}.keras"
-summary_path = f"models/{project_name}_Stats.txt"
+model_path = os.path.join(model_dir, "CNN.keras")
+summary_path = os.path.join(model_dir, "Stats.txt")
 
 if model_exist_cnn:
     # Try to load the saved model
     cnn_model = load_model(model_path)
-    cnn_model.compile(optimizer=opt, loss=loss_func)
+    cnn_model.compile(optimizer=opt, loss=loss_func, metrics=["accuracy"])
     log(f"\n");log(f"CNN Model loaded successfully.")
+    if regenerate_models:
+        # a loaded model decides its own input form (older models: integer codes as one channel)
+        X_train_cnn = model_builders.make_cnn_view_np(X_train_padded, cnn_model)
+        X_valid_cnn = model_builders.make_cnn_view_np(X_valid_padded, cnn_model)
 else:
     log(f"\n");log(f"CNN Model file not found. Creating a new model...")
+    cnn_embedding = args.cnn_input == "embedding"
+    # embedding: integer tokens (N, T); numeric: integer codes as one float channel (N, T, 1)
+    X_train_cnn = X_train_padded.astype("int32") if cnn_embedding else X_train_padded[..., np.newaxis].astype("float32")
+    X_valid_cnn = X_valid_padded.astype("int32") if cnn_embedding else X_valid_padded[..., np.newaxis].astype("float32")
+    log(f"CNN input: {'embedding of integer tokens' if cnn_embedding else 'integer codes as numeric channel'}")
     cnn_hyper_model = model_builders.CNNHyperModel(
         n_timesteps=X_train_padded.shape[1],
         loss_func=loss_func,
         final_dim=final_dim,
         final_activation=final_activation,
-        n_features=1
+        n_features=1,
+        vocab_size=(len(encoder.index_word) + 1) if cnn_embedding else None   # same tokeniser as the LSTM
     )
     metrics_callback = model_builders.MetricsCallback(
-        test_data=X_valid_padded,
+        test_data=X_valid_cnn,
         y_true=y_valid,
-        name=project_name
+        summary_path=summary_path
     )
 
     # try model-specific override first, then shared file
@@ -833,68 +979,104 @@ else:
             max_epochs=max_epoch_tuner,
             factor=3,
             directory='tuner',
-            project_name=model_name
+            # revision-1 architecture and input in the name: searches of older versions are never reused
+            project_name=f"{model_name}_rev1_{args.cnn_input}",
+            overwrite=args.recalibrate
         )
 
         stop_early = keras.callbacks.EarlyStopping(monitor='val_loss', patience=5)
 
         cnn_tuner.search(
-            X_train_padded,
+            X_train_cnn,
             y_train,
             epochs=max_epoch_tuner,
-            batch_size=64,    
+            batch_size=64,
             shuffle=True,
-            validation_data=(X_valid_padded, y_valid),
+            validation_data=(X_valid_cnn, y_valid),
             callbacks=[stop_early]
         )
         best_hps = cnn_tuner.get_best_hyperparameters(num_trials=1)[0]
         log('CNN Hyperparameter Tuning completed\n')
         log(f"{best_hps.values}")
-
+    #
     cnn_model = cnn_hyper_model.build(best_hps)
+
+    cnn_callbacks = [
+        keras.callbacks.ModelCheckpoint(
+            filepath=model_path,
+            monitor="val_accuracy",
+            mode="max",
+            save_best_only=True,
+            verbose=1
+        ),
+        keras.callbacks.EarlyStopping(
+            monitor="val_accuracy",
+            mode="max",
+            patience=EARLY_STOP_PATIENCE,
+            restore_best_weights=True,
+            verbose=1
+        ),
+        # lower the tuned learning rate when validation loss stalls (before early stopping)
+        keras.callbacks.ReduceLROnPlateau(
+            monitor="val_loss",
+            factor=REDUCE_LR["factor"],
+            patience=REDUCE_LR["patience"],
+            min_lr=REDUCE_LR["min_lr"],
+            verbose=1
+        )
+    ]
+
     cnn_history = cnn_model.fit(
-        X_train_padded,
+        X_train_cnn,
         y_train,
         shuffle=True,
         batch_size=64,
         epochs=max_epoch,
-        validation_data=(X_valid_padded, y_valid)
+        validation_data=(X_valid_cnn, y_valid),
+        callbacks=cnn_callbacks
     )
+
     log('CNN Model completed\n')
 
     val_acc_per_epoch = cnn_history.history['val_accuracy']
     best_epoch = val_acc_per_epoch.index(max(val_acc_per_epoch)) + 1
     log(f'Best epoch: {best_epoch}')
 
+    # EarlyStopping already restores the best weights.
+    # Save once more so the in-memory model and disk model are guaranteed identical.
     cnn_model.save(model_path)
-    log("CNN Model saved successfully.")
+    log("CNN best model saved successfully.")
+    #
 
-    helper.plot_history(cnn_history, model_name, best_hps.values)
-    helper.save_summary(cnn_model, cnn_history, best_hps, model_name)
+    run_record["models"]["CNN"] = {"hyperparameters": dict(best_hps.values), "best_epoch": int(best_epoch),
+                                   "epochs_run": len(cnn_history.history["val_accuracy"]),
+                                   "best_val_accuracy": float(max(cnn_history.history["val_accuracy"])),
+                                   "input": "embedding" if not model_builders.cnn_expects_3d(cnn_model) else "numeric"}
+    helper.plot_history(cnn_history, model_dir, "CNN", best_hps.values)
+    helper.save_summary(cnn_model, cnn_history, best_hps, model_dir, "CNN")
 
     with open(summary_path, 'a') as f:
         f.write('##### CNN #####:\n')
 
-    cnn_model.fit(
-        X_train_padded,
-        y_train,
-        batch_size=64,
-        epochs=1,
-        shuffle=True,
-        validation_data=(X_valid_padded, y_valid),
-        callbacks=[metrics_callback]
-    )
+    # Write final validation metrics for the restored best model without
+    # performing another training epoch (which would change the weights).
+    metrics_callback.set_model(cnn_model)
+    metrics_callback.on_epoch_end(epoch=best_epoch - 1, logs=None)
     
 log(f"CNN architecture: ") if verbose else None
 log(cnn_model.summary()) if verbose else None
 
 model_name= f"{project_name}_LSTM"
-model_path = f"models/{model_name}.keras"
+model_path = os.path.join(model_dir, "LSTM.keras")
 
 if model_exist_lstm:
     # Try to load the saved model
     lstm_model = load_model(model_path)
-    lstm_model.compile(optimizer='adam', loss=loss_func)
+    lstm_model.compile(
+        optimizer=keras.optimizers.Adam(learning_rate=learning_rate, clipnorm=LSTM_CLIPNORM),
+        loss=loss_func,
+        metrics=["accuracy"]
+    )
     log(f"\n");log(f"LSTM Model loaded successfully.")
 else:
     log(f"\n");log(f"LSTM Model file not found. Creating a new model...")
@@ -907,7 +1089,7 @@ else:
     metrics_callback = model_builders.MetricsCallback(
         test_data=X_valid_padded,
         y_true=y_valid,
-        name=project_name
+        summary_path=summary_path
     )
 
     # try model-specific override first, then shared file
@@ -925,7 +1107,8 @@ else:
             max_epochs=max_epoch_tuner,
             factor=3,
             directory='tuner',
-            project_name=model_name
+            project_name=f"{model_name}_rev1",     # clipping changed: older searches are not reused
+            overwrite=args.recalibrate
         )
 
         stop_early = keras.callbacks.EarlyStopping(monitor='val_loss', patience=5)
@@ -942,15 +1125,42 @@ else:
         best_hps = lstm_tuner.get_best_hyperparameters(num_trials=1)[0]
         log('LSTM Hyperparameter Tuning completed\n')
         log(f"{best_hps.values}")
-
+    #
     lstm_model = lstm_hyper_model.build(best_hps)
+
+    lstm_callbacks = [
+        keras.callbacks.ModelCheckpoint(
+            filepath=model_path,
+            monitor="val_accuracy",
+            mode="max",
+            save_best_only=True,
+            verbose=1
+        ),
+        keras.callbacks.EarlyStopping(
+            monitor="val_accuracy",
+            mode="max",
+            patience=EARLY_STOP_PATIENCE,
+            restore_best_weights=True,
+            verbose=1
+        ),
+        # lower the tuned learning rate when validation loss stalls (before early stopping)
+        keras.callbacks.ReduceLROnPlateau(
+            monitor="val_loss",
+            factor=REDUCE_LR["factor"],
+            patience=REDUCE_LR["patience"],
+            min_lr=REDUCE_LR["min_lr"],
+            verbose=1
+        )
+    ]
+
     lstm_history = lstm_model.fit(
         X_train_padded,
         y_train,
         batch_size=64,
         shuffle=True,
         epochs=max_epoch,
-        validation_data=(X_valid_padded, y_valid)
+        validation_data=(X_valid_padded, y_valid),
+        callbacks=lstm_callbacks
     )
 
     val_acc_per_epoch = lstm_history.history['val_accuracy']
@@ -958,23 +1168,25 @@ else:
     log(f'Best epoch: {best_epoch}')
     log('LSTM Model completed\n')
 
+    # EarlyStopping restored the best weights.
+    # Save them explicitly so disk and memory are identical.
     lstm_model.save(model_path)
-    log("Model saved successfully.")
-
-    helper.plot_history(lstm_history, model_name, best_hps.values)
-    helper.save_summary(lstm_model, lstm_history, best_hps, model_name)
+    log("LSTM best model saved successfully.")
+    #
+    
+    run_record["models"]["LSTM"] = {"hyperparameters": dict(best_hps.values), "best_epoch": int(best_epoch),
+                                    "epochs_run": len(lstm_history.history["val_accuracy"]),
+                                    "best_val_accuracy": float(max(lstm_history.history["val_accuracy"]))}
+    helper.plot_history(lstm_history, model_dir, "LSTM", best_hps.values)
+    helper.save_summary(lstm_model, lstm_history, best_hps, model_dir, "LSTM")
 
     with open(summary_path, 'a') as f:
         f.write('\n\n##### LSTM #####:\n')
 
-    lstm_model.fit(
-        X_train_padded,
-        y_train,
-        batch_size=64,
-        epochs=1,
-        validation_data=(X_valid_padded, y_valid),
-        callbacks=[metrics_callback]
-    )
+    # Write final validation metrics for the restored best model without
+    # performing another training epoch (which would change the weights).
+    metrics_callback.set_model(lstm_model)
+    metrics_callback.on_epoch_end(epoch=best_epoch - 1, logs=None)
 
 log(f"LSTM architecture: ") if verbose else None
 log(lstm_model.summary()) if verbose else None
@@ -986,7 +1198,7 @@ if shuffle_validation:
 
 # model stacking
 model_name= f"{project_name}_Ensemble"
-model_path = f"models/{model_name}.keras"
+model_path = os.path.join(model_dir, "Ensemble.keras")
 
 if model_exist_en:
     # Try to load the saved model
@@ -1012,7 +1224,11 @@ else:
     inp_lstm = keras.Input(shape=(n_timesteps,), dtype="int32",   name="ensemble_lstm_in")
     log("E3") if verbose else None
 
-    inp_cnn  = keras.Input(shape=(n_timesteps, 1), dtype="float32", name="ensemble_cnn_in")
+    # CNN input follows the CNN model: (T,) integer tokens with embedding, (T, 1) float otherwise
+    if model_builders.cnn_expects_3d(cnn_model):
+        inp_cnn = keras.Input(shape=(n_timesteps, 1), dtype="float32", name="ensemble_cnn_in")
+    else:
+        inp_cnn = keras.Input(shape=(n_timesteps,), dtype="int32", name="ensemble_cnn_in")
     log("E4") if verbose else None
 
     models_for_ensemble = [lstm_model, cnn_model]  # order doesn't matter (rank-based routing)
@@ -1028,7 +1244,7 @@ else:
     optimizer = keras.optimizers.Adam(learning_rate=learning_rate)
     callbacks = [
         keras.callbacks.ModelCheckpoint(
-            filepath=f"models/{project_name}_Ensemble.best.keras",
+            filepath=os.path.join(model_dir, "Ensemble.best.keras"),
             monitor="val_accuracy", mode="max", save_best_only=True
         ),
         keras.callbacks.EarlyStopping(
@@ -1077,7 +1293,7 @@ else:
     log("E10") if verbose else None
 
     # Plot training history
-    helper.plot_history(history, model_name, "ensemble")
+    helper.plot_history(history, model_dir, "Ensemble", "ensemble")
     
     # Write summary section
     ensemble.save(model_path)
@@ -1092,7 +1308,7 @@ else:
     metrics_callback = model_builders.MetricsCallback(
         test_data=[X_valid_padded, X_valid_cnn_for_metrics],
         y_true=y_valid,
-        name=project_name
+        summary_path=summary_path
     )
 
     log("E11") if verbose else None
@@ -1100,6 +1316,12 @@ else:
     # write one final classification report without re-training
     metrics_callback.set_model(ensemble)
     metrics_callback.on_epoch_end(epoch=max_epoch_ensemble, logs=None)
+
+    run_record["models"]["Ensemble"] = {"epochs": max_epoch_ensemble}
+    run_record["finished"] = time.strftime("%Y%m%d.%H%M%S")
+    run_record["log_file"] = logfile_path
+    update_model_metadata(project_name, {"training_run": run_record})
+    log(f"Training parameters recorded in {os.path.join(model_dir, 'parameters.json')} (training_run)")
 
 if verbose:
     log("Ensemble architecture:")
@@ -1109,7 +1331,7 @@ helper.validate_model_classes(ensemble, metadata)
 
 if args.validate_models:
     # Try to load cached validation set (works when models are loaded without retraining)
-    val_cache_path = f"models/{project_name}_val_cache.npz"
+    val_cache_path = os.path.join(model_dir, "val_cache.npz")
     VAL = None
     if os.path.isfile(val_cache_path):
         try:

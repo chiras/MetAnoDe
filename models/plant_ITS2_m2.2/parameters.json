@@ -1,0 +1,152 @@
+{
+    "labels": {
+        "0": "true",
+        "1": "substitution",
+        "2": "indel",
+        "3": "chimera",
+        "4": "ITS2.fungi.1"
+    },
+    "n_classes": 5,
+    "chimera_mode": "legacy",
+    "chimera_min_diff": {
+        "frac": 0.03,
+        "abs": 8
+    },
+    "offtargets": [
+        "data/plants_ITS2/ITS2.fungi.trim.1.fasta.gz"
+    ],
+    "reverse": false,
+    "cnn_input": "embedding",
+    "training_run": {
+        "command_line": "/opt/MetAnoDe/metanode.py -db data/plants_ITS2/ITS2.Quaresma2024.all.trimmedpy2.fasta.gz -ot data/plants_ITS2/ITS2.fungi.trim.1.fasta.gz -p plant_ITS2_m2.2 -query data/plants_ITS2/ITS2_plants_target.unseen.trimmed.fa -e 400 -seed 42 --len_factors 0.5,1.5 --chimera_mode legacy",
+        "started": "20261023.102822",
+        "seed": 42,
+        "git": {
+            "commit_short": "c2514a2",
+            "commit_full": "c2514a23db4dc14f5151385a0670f334aa46c1e2",
+            "count": "136",
+            "source": "/opt/MetAnoDe"
+        },
+        "environment": {
+            "python": "3.12.3",
+            "tensorflow": "2.17.0",
+            "keras": "3.3.3",
+            "keras_tuner": "1.4.7",
+            "numpy": "1.26.4",
+            "pandas": "2.2.1",
+            "sklearn": "1.4.2"
+        },
+        "code_sha256": {
+            "metanode.py": "5d9c2f941630d9b19d4095897cadfde0fd36ebbcc851f6ee10c337a4cd384dfc",
+            "helper.py": "91d0de0254277d4726454e83d71ad576508bfdf2c59b107e7d0f568bf4b0e472",
+            "model_builders.py": "02dd00e614a48e118500c26b1d4eb01f082c26c94f235dc8d892fb6f9b0a069e"
+        },
+        "inputs": {
+            "true_file": {
+                "path": "data/plants_ITS2/ITS2.Quaresma2024.all.trimmedpy2.fasta.gz",
+                "sha256": "3dffb77bda3dee61e19c76ee32f7bcdeef3b655f0fc834f02c829839f2772480",
+                "records": 197573
+            },
+            "offtargets": [
+                {
+                    "path": "data/plants_ITS2/ITS2.fungi.trim.1.fasta.gz",
+                    "sha256": "813c5fc29acc0d2e6025301af77421b1b1a2183eb0ff09cb461bfe6953e7896c",
+                    "records": 31050
+                }
+            ]
+        },
+        "data": {
+            "target_len_arg": null,
+            "length_filter_factors": [
+                0.75,
+                1.25
+            ],
+            "reverse": false,
+            "validation_fraction": 0.25,
+            "max_len": 500,
+            "n_train": 1480896,
+            "n_valid": 493633,
+            "per_class_train": {
+                "0": 296179,
+                "1": 296179,
+                "2": 296180,
+                "3": 296179,
+                "4": 296179
+            },
+            "per_class_valid": {
+                "0": 98726,
+                "1": 98727,
+                "2": 98726,
+                "3": 98727,
+                "4": 98727
+            },
+            "split_reused": true
+        },
+        "classes": {
+            "balance_4C": true,
+            "loss": "sparse_categorical_crossentropy",
+            "chimera": {
+                "mode": "legacy",
+                "min_diff_frac": 0.03,
+                "min_diff_abs": 8
+            },
+            "simulation": "not exposed by helper (see code_sha256)"
+        },
+        "training": {
+            "max_epochs": 400,
+            "max_epochs_tuner": 5,
+            "max_epochs_ensemble": 5,
+            "batch_size": 64,
+            "batch_size_ensemble": 16,
+            "early_stopping_patience": 10,
+            "reduce_lr_on_plateau": {
+                "monitor": "val_loss",
+                "factor": 0.5,
+                "patience": 3,
+                "min_lr": 1e-05
+            },
+            "lstm_clipnorm": 0.5,
+            "ensemble_learning_rate": 0.0003,
+            "tuner": "Hyperband (factor 3, objective val_accuracy)",
+            "tuner_overwrite": false,
+            "threads": null
+        },
+        "models": {
+            "CNN": {
+                "hyperparameters": {
+                    "learning_rate": 0.0003,
+                    "filters": 128,
+                    "dropout": 0.25,
+                    "tuner/epochs": 5,
+                    "tuner/initial_epoch": 0,
+                    "tuner/bracket": 0,
+                    "tuner/round": 0
+                },
+                "best_epoch": 66,
+                "epochs_run": 76,
+                "best_val_accuracy": 0.9806759357452393,
+                "input": "embedding"
+            },
+            "LSTM": {
+                "hyperparameters": {
+                    "embeddim": 64,
+                    "units": 64,
+                    "dropout": 0.25,
+                    "learning_rate": 0.001,
+                    "tuner/epochs": 5,
+                    "tuner/initial_epoch": 0,
+                    "tuner/bracket": 0,
+                    "tuner/round": 0
+                },
+                "best_epoch": 59,
+                "epochs_run": 69,
+                "best_val_accuracy": 0.968557596206665
+            },
+            "Ensemble": {
+                "epochs": 5
+            }
+        },
+        "finished": "20261024.064131",
+        "log_file": "models/plant_ITS2_m2.2/logs/plant_ITS2_m2.2.20261023.102822.log"
+    }
+}
