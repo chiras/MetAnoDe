@@ -1,0 +1,171 @@
+{
+    "labels": {
+        "0": "true",
+        "1": "substitution",
+        "2": "indel",
+        "3": "chimera",
+        "4": "bold_COI_m1.1.invertebrates.offtarget_family20182.primer_trimmed",
+        "5": "bold_COI_m1.1.fungi.taxonomic_sample.primer_trimmed",
+        "6": "bold_COI_m1.1.plants.taxonomic_sample.primer_trimmed",
+        "7": "bold_COI_m1.1.protists.taxonomic_sample.primer_trimmed"
+    },
+    "n_classes": 8,
+    "chimera_mode": "legacy",
+    "chimera_min_diff": {
+        "frac": 0.03,
+        "abs": 8
+    },
+    "offtargets": [
+        "data/animals_COI-5P/bold_COI_m1.1.invertebrates.offtarget_family20182.primer_trimmed.fasta.gz",
+        "data/animals_COI-5P/bold_COI_m1.1.fungi.taxonomic_sample.primer_trimmed.fasta.gz",
+        "data/animals_COI-5P/bold_COI_m1.1.plants.taxonomic_sample.primer_trimmed.fasta.gz",
+        "data/animals_COI-5P/bold_COI_m1.1.protists.taxonomic_sample.primer_trimmed.fasta.gz"
+    ],
+    "reverse": false,
+    "cnn_input": "embedding",
+    "training_run": {
+        "command_line": "/opt/MetAnoDe/metanode.py -db data/animals_COI-5P/bold_COI_m1.1.vertebrata.taxonomic_sample.primer_trimmed.fasta.gz -ot data/animals_COI-5P/bold_COI_m1.1.invertebrates.offtarget_family20182.primer_trimmed.fasta.gz,data/animals_COI-5P/bold_COI_m1.1.fungi.taxonomic_sample.primer_trimmed.fasta.gz,data/animals_COI-5P/bold_COI_m1.1.plants.taxonomic_sample.primer_trimmed.fasta.gz,data/animals_COI-5P/bold_COI_m1.1.protists.taxonomic_sample.primer_trimmed.fasta.gz -p vertebrate_COI-5P_m2.4 -query data/animals_COI-5P/COI_vertebrates.target.eval.unseen.trimmed.fa -e 400 -seed 42 --len_factors 0.75,1.25 --chimera_mode legacy",
+        "started": "20261025.051046",
+        "seed": 42,
+        "git": {
+            "commit_short": "c2514a2",
+            "commit_full": "c2514a23db4dc14f5151385a0670f334aa46c1e2",
+            "count": "136",
+            "source": "/opt/MetAnoDe"
+        },
+        "environment": {
+            "python": "3.12.3",
+            "tensorflow": "2.17.0",
+            "keras": "3.3.3",
+            "keras_tuner": "1.4.7",
+            "numpy": "1.26.4",
+            "pandas": "2.2.1",
+            "sklearn": "1.4.2"
+        },
+        "code_sha256": {
+            "metanode.py": "5d9c2f941630d9b19d4095897cadfde0fd36ebbcc851f6ee10c337a4cd384dfc",
+            "helper.py": "91d0de0254277d4726454e83d71ad576508bfdf2c59b107e7d0f568bf4b0e472",
+            "model_builders.py": "02dd00e614a48e118500c26b1d4eb01f082c26c94f235dc8d892fb6f9b0a069e"
+        },
+        "inputs": {
+            "true_file": {
+                "path": "data/animals_COI-5P/bold_COI_m1.1.vertebrata.taxonomic_sample.primer_trimmed.fasta.gz",
+                "sha256": "2ca190c72d522bd2ebafd06804677dbc4571b301f2eaec5d2f441de404420e14",
+                "records": 20182
+            },
+            "offtargets": [
+                {
+                    "path": "data/animals_COI-5P/bold_COI_m1.1.invertebrates.offtarget_family20182.primer_trimmed.fasta.gz",
+                    "sha256": "b85bd5237f843619831deacff3c2b97acdcca41d28e9b5da13e0dd88d2ea0818",
+                    "records": 20182
+                },
+                {
+                    "path": "data/animals_COI-5P/bold_COI_m1.1.fungi.taxonomic_sample.primer_trimmed.fasta.gz",
+                    "sha256": "3ab30062f1f8ac1f34dc7c9018b9e252b1a0b2385d384571fd1baf02d7e78b82",
+                    "records": 369
+                },
+                {
+                    "path": "data/animals_COI-5P/bold_COI_m1.1.plants.taxonomic_sample.primer_trimmed.fasta.gz",
+                    "sha256": "c45415d0a4fd6276600597f2d152dd2a316900483f82b753fa81bd993f212af6",
+                    "records": 2295
+                },
+                {
+                    "path": "data/animals_COI-5P/bold_COI_m1.1.protists.taxonomic_sample.primer_trimmed.fasta.gz",
+                    "sha256": "91d4393c1b7cfb5e849fb9fa78c37a438089021d6035f61d9fd92e83236c58b1",
+                    "records": 425
+                }
+            ]
+        },
+        "data": {
+            "target_len_arg": null,
+            "length_filter_factors": [
+                0.75,
+                1.25
+            ],
+            "reverse": false,
+            "validation_fraction": 0.25,
+            "max_len": 468,
+            "n_train": 242181,
+            "n_valid": 80728,
+            "per_class_train": {
+                "0": 30273,
+                "1": 30273,
+                "2": 30273,
+                "3": 30273,
+                "4": 30273,
+                "5": 30272,
+                "6": 30272,
+                "7": 30272
+            },
+            "per_class_valid": {
+                "0": 10091,
+                "1": 10091,
+                "2": 10091,
+                "3": 10091,
+                "4": 10091,
+                "5": 10091,
+                "6": 10091,
+                "7": 10091
+            },
+            "split_reused": true
+        },
+        "classes": {
+            "balance_4C": true,
+            "loss": "sparse_categorical_crossentropy",
+            "chimera": {
+                "mode": "legacy",
+                "min_diff_frac": 0.03,
+                "min_diff_abs": 8
+            },
+            "simulation": "not exposed by helper (see code_sha256)"
+        },
+        "training": {
+            "max_epochs": 400,
+            "max_epochs_tuner": 5,
+            "max_epochs_ensemble": 5,
+            "batch_size": 64,
+            "batch_size_ensemble": 16,
+            "early_stopping_patience": 10,
+            "reduce_lr_on_plateau": {
+                "monitor": "val_loss",
+                "factor": 0.5,
+                "patience": 3,
+                "min_lr": 1e-05
+            },
+            "lstm_clipnorm": 0.5,
+            "ensemble_learning_rate": 0.0003,
+            "tuner": "Hyperband (factor 3, objective val_accuracy)",
+            "tuner_overwrite": false,
+            "threads": null
+        },
+        "models": {
+            "CNN": {
+                "hyperparameters": {
+                    "learning_rate": 0.0003,
+                    "filters": 128,
+                    "dropout": 0.5
+                },
+                "best_epoch": 23,
+                "epochs_run": 33,
+                "best_val_accuracy": 0.9910935759544373,
+                "input": "embedding"
+            },
+            "LSTM": {
+                "hyperparameters": {
+                    "learning_rate": 0.0003,
+                    "embeddim": 64,
+                    "units": 64,
+                    "dropout": 0.25
+                },
+                "best_epoch": 73,
+                "epochs_run": 83,
+                "best_val_accuracy": 0.9642255306243896
+            },
+            "Ensemble": {
+                "epochs": 5
+            }
+        },
+        "finished": "20261025.073731",
+        "log_file": "models/vertebrate_COI-5P_m2.4/logs/vertebrate_COI-5P_m2.4.20261025.051046.log"
+    }
+}

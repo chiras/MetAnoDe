@@ -20,8 +20,8 @@ data/.DS_Store
 splits/*.csv.gz
 models/*_cache.npz
 modules/data_extraction
-models/*
 data.old
 data.old/*
 tier3*
 *.bak*
+models/*/val_cache.npz

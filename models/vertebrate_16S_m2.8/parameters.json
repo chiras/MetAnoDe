@@ -1,0 +1,144 @@
+{
+    "labels": {
+        "0": "true",
+        "1": "substitution",
+        "2": "indel",
+        "3": "chimera",
+        "4": "vertebrate_16S.invertebrates.train"
+    },
+    "n_classes": 5,
+    "chimera_mode": "legacy",
+    "chimera_min_diff": {
+        "frac": 0.03,
+        "abs": 8
+    },
+    "offtargets": [
+        "data/animals_16S/vertebrate_16S.invertebrates.train.fasta.gz"
+    ],
+    "reverse": false,
+    "cnn_input": "embedding",
+    "training_run": {
+        "command_line": "/opt/MetAnoDe/metanode.py -db data/animals_16S/vertebrate_16S.target.train.fasta.gz -ot data/animals_16S/vertebrate_16S.invertebrates.train.fasta.gz -p vertebrate_16S_m2.8 -query data/animals_16S/vertebrate_16S.target.eval.fa -e 400 -seed 84 --len_factors 0.5,1.5 --chimera_mode legacy",
+        "started": "20261024.190355",
+        "seed": 84,
+        "git": {
+            "commit_short": "ff207d4",
+            "commit_full": "ff207d44ea4bffc7ae7db4cc6c3cdf3d027fb012",
+            "count": "140",
+            "source": "/opt/MetAnoDe"
+        },
+        "environment": {
+            "python": "3.12.3",
+            "tensorflow": "2.17.0",
+            "keras": "3.3.3",
+            "keras_tuner": "1.4.7",
+            "numpy": "1.26.4",
+            "pandas": "2.2.1",
+            "sklearn": "1.4.2"
+        },
+        "code_sha256": {
+            "metanode.py": "a15db34976694be9658d85f69fa27728ab7f2dc6532e400798aa96744ba09de8",
+            "helper.py": "91d0de0254277d4726454e83d71ad576508bfdf2c59b107e7d0f568bf4b0e472",
+            "model_builders.py": "02dd00e614a48e118500c26b1d4eb01f082c26c94f235dc8d892fb6f9b0a069e"
+        },
+        "inputs": {
+            "true_file": {
+                "path": "data/animals_16S/vertebrate_16S.target.train.fasta.gz",
+                "sha256": "539125f8bf2ef0fd408451f43c4edd205ba5f9a0381133c060c204453eb1bbf3",
+                "records": 48450
+            },
+            "offtargets": [
+                {
+                    "path": "data/animals_16S/vertebrate_16S.invertebrates.train.fasta.gz",
+                    "sha256": "6f09ad40b434e14cad7b1020da558be2910043b501a55d7d91ad1d84a95dfd56",
+                    "records": 3407
+                }
+            ]
+        },
+        "data": {
+            "target_len_arg": null,
+            "length_filter_factors": [
+                0.75,
+                1.25
+            ],
+            "reverse": false,
+            "validation_fraction": 0.25,
+            "max_len": 312,
+            "n_train": 363374,
+            "n_valid": 121125,
+            "per_class_train": {
+                "0": 72675,
+                "1": 72675,
+                "2": 72675,
+                "3": 72675,
+                "4": 72674
+            },
+            "per_class_valid": {
+                "0": 24225,
+                "1": 24225,
+                "2": 24225,
+                "3": 24225,
+                "4": 24225
+            },
+            "split_reused": true
+        },
+        "classes": {
+            "balance_4C": true,
+            "loss": "sparse_categorical_crossentropy",
+            "chimera": {
+                "mode": "legacy",
+                "min_diff_frac": 0.03,
+                "min_diff_abs": 8
+            },
+            "simulation": "not exposed by helper (see code_sha256)"
+        },
+        "training": {
+            "max_epochs": 400,
+            "max_epochs_tuner": 5,
+            "max_epochs_ensemble": 5,
+            "batch_size": 64,
+            "batch_size_ensemble": 16,
+            "early_stopping_patience": 10,
+            "reduce_lr_on_plateau": {
+                "monitor": "val_loss",
+                "factor": 0.5,
+                "patience": 3,
+                "min_lr": 1e-05
+            },
+            "lstm_clipnorm": 0.5,
+            "ensemble_learning_rate": 0.0003,
+            "tuner": "Hyperband (factor 3, objective val_accuracy)",
+            "tuner_overwrite": false,
+            "threads": null
+        },
+        "models": {
+            "CNN": {
+                "hyperparameters": {
+                    "learning_rate": 0.0003,
+                    "filters": 128,
+                    "dropout": 0.5
+                },
+                "best_epoch": 134,
+                "epochs_run": 144,
+                "best_val_accuracy": 0.9586542844772339,
+                "input": "embedding"
+            },
+            "LSTM": {
+                "hyperparameters": {
+                    "learning_rate": 0.0003,
+                    "embeddim": 64,
+                    "units": 64,
+                    "dropout": 0.25
+                },
+                "best_epoch": 88,
+                "epochs_run": 98,
+                "best_val_accuracy": 0.9510918259620667
+            },
+            "Ensemble": {
+                "epochs": 5
+            }
+        },
+        "finished": "20261024.224921",
+        "log_file": "models/vertebrate_16S_m2.8/logs/vertebrate_16S_m2.8.20261024.190355.log"
+    }
+}
