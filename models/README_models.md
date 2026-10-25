@@ -5,13 +5,13 @@ This directory contains the pretrained MetAnoDe models. Each model is stored in 
 For example:
 
 ```bash
-python metanode.py -query query.fasta -p bacterial_16S_m1.3
+python metanode.py -query query.fasta -p bacterial_16S-V4_m2.2
 ```
 
 loads the model from:
 
 ```text
-models/bacterial_16S_m1.3/
+models/bacterial_16S-V4_m2.2/
 ```
 
 ## Model naming
@@ -19,26 +19,33 @@ models/bacterial_16S_m1.3/
 Model identifiers follow the convention:
 
 ```text
-<target>_<marker>_m<major>.<minor>
+<target>_<marker>_m<major>.<minor>[<suffix>]
 ```
 
-Current examples are:
+for example `bacterial_16S-V4_m2.2`, `vertebrate_COI-5P_m2.4` or `plant_ITS2_m1.4`. An optional suffix marks a training variant of the same version (e.g. `legacy2` for a repeated run with the legacy chimera generation); the variant actually used is documented in the model's `parameters.json`.
 
-```text
-bacterial_16S_m1.3
-plant_ITS2_m1.4
-fungal_ITS2_m1.1
-```
-
-The model identifier is intentionally short. Detailed information about the marker region, primer combination, reference database, preprocessing requirements, target group, and anomaly classes should be stored in the model-specific `parameters.json` and, where applicable, in a model-specific `README.md`.
+The model identifier is intentionally short. Detailed information about the marker region, primer combination, reference data, preprocessing, target group and anomaly classes is stored in the model-specific `parameters.json` and, where applicable, in a model-specific `README.md`.
 
 ### Versioning
 
-A minor version increment, for example `m1.3` to `m1.4`, denotes an updated model for the same biological target and amplicon definition, such as retraining with improved reference data, off-target data, hyperparameters, or minor implementation changes.
+A minor version increment, for example `m2.2` to `m2.3`, denotes an updated model for the same biological target and amplicon definition, such as retraining with improved reference data, off-target data, hyperparameters or minor implementation changes.
 
-A major version increment, for example `m1.x` to `m2.0`, should be used for substantial changes that may materially alter model behaviour, such as primer combinations, a changed anomaly-class design, major architecture changes, or incompatible preprocessing.
+A major version increment, for example `m1.x` to `m2.x`, is used for substantial changes that may materially alter model behaviour, such as primer combinations, a changed anomaly-class design, major architecture changes or incompatible preprocessing.
 
-Models based on substantially different marker regions should receive distinct model identifiers rather than being treated only as new versions of an existing assay.
+The `m2` models (revision 1) differ from `m1` models in:
+
+- **CNN architecture:** a single-unit layer between the dense layer and the output layer, left over from a binary implementation, was removed; nucleotides are represented by a learned embedding instead of integer codes in one numeric channel;
+- **training:** stronger gradient clipping of the LSTM and learning-rate reduction on validation-loss plateaus; for most models fixed hyperparameters instead of per-model tuning (`hyperparameters.json`);
+- **training data:** primer-defined amplicons for most markers; for fungal ITS, NCBI amplicons combined with UNITE sequences extended to the same amplicon boundaries;
+- **class construction:** a marker-specific length range for true sequences (wider for length-variable markers such as ITS);
+- **documentation:** a complete record of each training run in `parameters.json` (see below).
+
+`m1` and `m2` models are not interchangeable: the same input can yield different predictions.
+
+Models based on substantially different marker regions receive distinct model identifiers rather than being treated only as new versions of an existing assay.
+
+`m1` are not used in this repository anymore. 
+
 
 ## Directory structure
 
@@ -47,25 +54,25 @@ A fully trained model directory normally has the following structure:
 ```text
 <model_id>/
 ├── README.md                  # optional model-specific human-readable documentation
-├── parameters.json            # required model metadata
-├── hyperparameters.json       # optional training hyperparameter overrides
+├── parameters.json            # required model metadata and training record
+├── hyperparameters.json       # fixed hyperparameters used instead of tuning, if applicable
 ├── CNN.keras                  # required pretrained CNN
-├── CNN.txt                    # model summary
+├── CNN.txt                    # model summary and training course
 ├── LSTM.keras                 # required pretrained LSTM
-├── LSTM.txt                   # model summary
+├── LSTM.txt                   # model summary and training course
 ├── Ensemble.keras             # required pretrained MetAnoDe ensemble
 ├── Ensemble.best.keras        # best ensemble checkpoint, if retained
 ├── Ensemble.config            # required ensemble configuration
 ├── Ensemble.token             # required model compatibility token
-├── Stats.txt                  # training and validation statistics
-├── val_cache.npz              # cached validation data, if retained
+├── Stats.txt                  # hold-out validation statistics (CNN, LSTM, ensemble)
+├── logs/                      # training log(s): command, seed, data sizes, training course
 └── plots/
     ├── CNN.training_validation.pdf
     ├── LSTM.training_validation.pdf
     └── Ensemble.training_validation.pdf
 ```
 
-MetAnoDe currently requires the following files to use an existing pretrained model:
+MetAnoDe requires the following files to use an existing pretrained model:
 
 ```text
 CNN.keras
@@ -76,20 +83,32 @@ Ensemble.token
 parameters.json
 ```
 
-Other files are training, validation, documentation, or diagnostic artifacts and are not required for prediction.
+Other files are training, validation, documentation or diagnostic artifacts and are not required for prediction. The validation cache (`val_cache.npz`) produced during training is not kept in the repository: the validation set is defined by the training data, the seed and the split recorded in `parameters.json`.
 
-A directory containing only `parameters.json` is therefore not yet a complete pretrained model. It can be used as a model-development directory while the corresponding model is being trained.
+A directory without the files listed above is not a complete pretrained model. It can be used as a model-development directory while the corresponding model is being trained.
 
 ## Model metadata
 
-`parameters.json` is the machine-readable description of the model. In addition to class labels and class counts, model metadata should document the biological and technical definition of the model wherever applicable.
+`parameters.json` is the machine-readable description of the model. It contains the class labels and, for models trained with revision 1 or later, a complete record of the training run in the section `training_run`:
 
-Recommended fields include:
+| Field | Content |
+|---|---|
+| `labels` | class index -> class name (0 true, 1 substitution, 2 indel, 3 chimera, 4+ off-target groups) |
+| `offtargets` | off-target training files |
+| `reverse` | `true` if the model was trained on reversed sequences; MetAnoDe then reverses the query itself (see below) |
+| `cnn_input` | `embedding` or `numeric` |
+| `chimera_mode` | generation of the training chimeras (`legacy` or `homologous`) |
+| `training_run.command_line`, `seed`, `started`, `finished` | how and when the model was trained |
+| `training_run.git`, `code_sha256`, `environment` | code version (commit and checksums) and package versions |
+| `training_run.inputs` | training and off-target files with SHA-256 checksums and record counts |
+| `training_run.data` | length filter, validation share, sequence counts per class (training and validation) |
+| `training_run.training` | epochs, batch sizes, early stopping, learning-rate reduction, LSTM clipping |
+| `training_run.models` | per component: hyperparameters, best epoch, epochs run, best validation accuracy |
+
+Additional descriptive fields (target group, marker, primers, reference database) are recommended, for example:
 
 ```json
 {
-  "model_id": "arthropod_COI_m1.0",
-  "model_version": "1.0",
   "target_group": "Arthropoda",
   "marker": "COI",
   "region": "mlCOIintF-jgHCO2198",
@@ -97,24 +116,16 @@ Recommended fields include:
   "forward_primer": "GGWACWGGWTGAACWGTWTAYCCYCC",
   "reverse_primer_name": "jgHCO2198",
   "reverse_primer": "TAIACYTCIGGRTGICCRAARAAYCA",
-  "preprocessing": {
-    "primers_removed": true,
-    "reverse_complement": false
-  },
-  "reference_database": "BOLD",
-  "labels": {
-    "0": "true",
-    "1": "substitution",
-    "2": "indel",
-    "3": "chimera"
-  },
-  "n_classes": 4,
-  "core_classes": 4,
-  "off_target_classes": []
+  "preprocessing": {"primers_removed": true},
+  "reference_database": "BOLD"
 }
 ```
 
-The exact fields can differ between models, but the metadata should contain enough information to determine which amplicon the model represents and which preprocessing was used during training.
+## Query preparation
+
+- **Primers must be removed** from the query sequences: all models are trained on primer-trimmed amplicons.
+- **Orientation:** query sequences are expected in the forward orientation of the amplicon (forward primer at the 5' end). Models trained on reversed sequences (`"reverse": true`) reverse the query internally; the prediction table keeps the original orientation. `-rv` is only needed when training such a model.
+- **Length:** sequences far outside the length range of the training data (see `training_run.data`) are outside the model's experience and should be interpreted with caution.
 
 ## Model-specific documentation
 
@@ -127,8 +138,7 @@ Such documentation should state:
 - forward and reverse primer names and sequences;
 - whether primers are expected to be removed;
 - expected sequence orientation;
-- whether MetAnoDe applies reverse-complement transformation;
-- reference database and database release;
+- reference data and release;
 - construction and filtering of the training reference set;
 - biological off-target classes;
 - any additional preprocessing required before prediction;
@@ -136,13 +146,25 @@ Such documentation should state:
 
 ## Current model directories
 
-```text
-models/
-├── bacterial_16S_m1.3/
-├── fungal_ITS2_m1.1/
-└── plant_ITS2_m1.4/
-```
+Revision 1 models 
 
-At present, `bacterial_16S_m1.3` and `plant_ITS2_m1.4` contain the complete pretrained model artifact set required by MetAnoDe.
+| Model | Off-target classes | Note |
+|---|---|---|
+| `bacterial_16S-V4_m2.2` | mitochondria, plastids |  |
+| `fungal_ITS1_m2.5` | plants | forward orientation |
+| `fungal_ITS2_m2.1legacy2` | plants | |
+| `invertebrate_COI-5P_m2.4` | fungi, plants, protists, vertebrates | |
+| `metazoan_COI-5P_m2.4` | fungi, plants, protists | |
+| `plant_ITS2_m2.2` | fungi | |
+| `plant_rbcL_m2.4` | bryophytes, green algae |  |
+| `vertebrate_12S_m2.8` | bacteria, invertebrates |  |
+| `vertebrate_16S_m2.8` | invertebrates | |
+| `vertebrate_COI-5P_m2.4` | invertebrates, fungi, plants, protists | |
 
-`fungal_ITS2_m1.1` currently contains only `parameters.json` and should therefore be regarded as a model under development until the trained model artifacts are added.
+Earlier models (`m1`):
+
+| Model | Status |
+|---|---|
+| `bacterial_16S_m1.3` | superseded by `bacterial_16S-V4_m2.x` |
+| `plant_ITS2_m1.4` | superseded by `plant_ITS2_m2.x` |
+
