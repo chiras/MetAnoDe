@@ -8,17 +8,18 @@ Pre-trained models (revision 1, `m2`) are available in the subfolder `models` fo
 
 | Marker | Target region (primers) | Off-target classes | Model name | fw primer | rv primer |
 |---|---|---|---|---|---|
-| Bacterial 16S-V4 | 515F/806R, Kozich et al. (2013, https://doi.org/10.1128/AEM.01043-13) | mitochondria, plastids | `bacterial_16S-V4_m2.2` | GTGCCAGCMGCCGCGGTAA | GGACTACHVGGGTWTCTAAT |
-| Fungal ITS1 | ITS1F (Gardes & Bruns 1993) / ITS2 (White et al. 1990) | plants | `fungal_ITS1_m2.5` | CTTGGTCATTTAGAGGAAGTAA | GCTGCGTTCTTCATCGATGC |
-| Plant ITS2 | ITS-S2F / ITS4R, Sickel et al. (2015, https://doi.org/10.1186/s12898-015-0051-y) | fungi | `plant_ITS2_m2.2` | ATGCGATACTTGGTGTGAAT | TCCTCCGCTTATTGATATGC |
-| Plant rbcL | mini-barcode F52/R193, Little (2014) | bryophytes, green algae | `plant_rbcL_m2.4` | GTTGGATTCAAAGCTGGTGTTA | CVGTCCAMACAGTWGTCCATGT |
+| Bacterial 16S-V4 | 515F/806R, Kozich et al. (2013, https://doi.org/10.1128/AEM.01043-13) | mitochondria, plastids | `bacterial_16S-V4_m2.6` | GTGCCAGCMGCCGCGGTAA | GGACTACHVGGGTWTCTAAT |
+| Fungal ITS1 | ITS1F (Gardes & Bruns 1993) / ITS2 (White et al. 1990) | plants | `fungal_ITS1_m2.8` | CTTGGTCATTTAGAGGAAGTAA | GCTGCGTTCTTCATCGATGC |
+| Fungal ITS2 | fITS7 (Ihrmark et al. 2012) / ITS4 (White et al. 1990) | plants | `fungal_ITS2_m2.4` | GTGARTCATCGAATCTTTG | TCCTCCGCTTATTGATATGC |
+| Plant ITS2 | ITS-S2F / ITS4R, Sickel et al. (2015, https://doi.org/10.1186/s12898-015-0051-y) | fungi | `plant_ITS2_m2.4` | ATGCGATACTTGGTGTGAAT | TCCTCCGCTTATTGATATGC |
+| Plant rbcL | mini-barcode F52/R193, Little (2014) | bryophytes, green algae | `plant_rbcL_m2.2` | GTTGGATTCAAAGCTGGTGTTA | CVGTCCAMACAGTWGTCCATGT |
 | Invertebrate COI-5P | mlCOIintF/jgHCO2198, Leray et al. (2013, https://doi.org/10.1186/1742-9994-10-34) | fungi, plants, protists, vertebrates | `invertebrate_COI-5P_m2.4` | GGWACWGGWTGAACWGTWTAYCCYCC | TAIACYTCIGGRTGICCRAARAAYCA |
-| Metazoan COI-5P | mlCOIintF/jgHCO2198, Leray et al. (2013) | fungi, plants, protists | `metazoan_COI-5P_m2.4` | GGWACWGGWTGAACWGTWTAYCCYCC | TAIACYTCIGGRTGICCRAARAAYCA |
-| Vertebrate COI-5P | mlCOIintF/jgHCO2198, Leray et al. (2013) | invertebrates, fungi, plants, protists | `vertebrate_COI-5P_m2.4` | GGWACWGGWTGAACWGTWTAYCCYCC | TAIACYTCIGGRTGICCRAARAAYCA |
+| Metazoan COI-5P | mlCOIintF/jgHCO2198, Leray et al. (2013) | fungi, plants, protists | `metazoan_COI-5P_m2.8` | GGWACWGGWTGAACWGTWTAYCCYCC | TAIACYTCIGGRTGICCRAARAAYCA |
+| Vertebrate COI-5P | mlCOIintF/jgHCO2198, Leray et al. (2013) | invertebrates, fungi, plants, protists | `vertebrate_COI-5P_m2.3` | GGWACWGGWTGAACWGTWTAYCCYCC | TAIACYTCIGGRTGICCRAARAAYCA |
 | Vertebrate 12S | V12S-U | bacteria, invertebrates | `vertebrate_12S_m2.8` | GTGCCAGCNRCCGCGGTYANAC | ATAGTRGGGTATCTAATCCYAGT |
 | Vertebrate 16S | V16S-U | invertebrates | `vertebrate_16S_m2.8` | ACGAGAAGACCCYRYGRARCTT | TCTHRRANAGGATTGCGCTGTTA |
 
-The `m1` models of earlier versions (`bacterial_16S_m1.3`, `plant_ITS2_m1.4`) were removed due to incompatibility with the latest version; `m1` and `m2` models are not interchangeable. Model selection, versioning and the metadata stored with each model are described in [`models/README_models.md`](models/README_models.md).
+The `m1` models of earlier versions (`bacterial_16S_m1.3`, `plant_ITS2_m1.4`) were removed due to incompatibility with the latest version; `m1` and `m2` models are not interchangeable. Each model was selected from several training runs of the same marker by hold-out validation and an independent in silico benchmark; version numbers are per training run, so a higher number does not imply a better model. Model selection, versioning and the metadata stored with each model are described in [`models/README_models.md`](models/README_models.md).
 
 More models can be trained on demand (see below, or file an issue and tag @chiras).
 
