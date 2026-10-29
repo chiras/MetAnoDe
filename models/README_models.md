@@ -5,13 +5,13 @@ This directory contains the pretrained MetAnoDe models. Each model is stored in 
 For example:
 
 ```bash
-python metanode.py -query query.fasta -p bacterial_16S-V4_m2.2
+python metanode.py -query query.fasta -p bacterial_16S-V4_m2.6
 ```
 
 loads the model from:
 
 ```text
-models/bacterial_16S-V4_m2.2/
+models/bacterial_16S-V4_m2.6/
 ```
 
 ## Model naming
@@ -22,7 +22,7 @@ Model identifiers follow the convention:
 <target>_<marker>_m<major>.<minor>[<suffix>]
 ```
 
-for example `bacterial_16S-V4_m2.2`, `vertebrate_COI-5P_m2.4` or `plant_ITS2_m1.4`. An optional suffix marks a training variant of the same version (e.g. `legacy2` for a repeated run with the legacy chimera generation); the variant actually used is documented in the model's `parameters.json`.
+for example `bacterial_16S-V4_m2.6` or `vertebrate_COI-5P_m2.3`. An optional suffix marks a training variant of the same version (e.g. `rv` for a model trained on reversed sequences); the settings actually used are documented in the model's `parameters.json`.
 
 The model identifier is intentionally short. Detailed information about the marker region, primer combination, reference data, preprocessing, target group and anomaly classes is stored in the model-specific `parameters.json` and, where applicable, in a model-specific `README.md`.
 
@@ -44,7 +44,7 @@ The `m2` models (revision 1) differ from `m1` models in:
 
 Models based on substantially different marker regions receive distinct model identifiers rather than being treated only as new versions of an existing assay.
 
-`m1` are not used in this repository anymore. 
+`m1` models are no longer included in this repository.
 
 
 ## Directory structure
@@ -146,25 +146,19 @@ Such documentation should state:
 
 ## Current model directories
 
-Revision 1 models 
+Revision 1 models (`m2`), selected per marker from several training runs by hold-out validation (all three components) and an independent in silico mock-community benchmark (MetAnoDe's added false removal and reduction of retained anomalies, class-balanced). Candidates within a marker differed by at most about 1–2 percentage points; ties were resolved by hold-out validation and the health of the CNN and LSTM components.
 
 | Model | Off-target classes | Note |
 |---|---|---|
-| `bacterial_16S-V4_m2.2` | mitochondria, plastids |  |
-| `fungal_ITS1_m2.5` | plants | forward orientation |
-| `fungal_ITS2_m2.1legacy2` | plants | |
+| `bacterial_16S-V4_m2.6` | mitochondria, plastids | |
+| `fungal_ITS1_m2.8` | plants | |
+| `fungal_ITS2_m2.4` | plants | |
 | `invertebrate_COI-5P_m2.4` | fungi, plants, protists, vertebrates | |
-| `metazoan_COI-5P_m2.4` | fungi, plants, protists | |
-| `plant_ITS2_m2.2` | fungi | |
-| `plant_rbcL_m2.4` | bryophytes, green algae |  |
-| `vertebrate_12S_m2.8` | bacteria, invertebrates |  |
+| `metazoan_COI-5P_m2.8` | fungi, plants, protists | |
+| `plant_ITS2_m2.4` | fungi | |
+| `plant_rbcL_m2.2` | bryophytes, green algae | |
+| `vertebrate_12S_m2.8` | bacteria, invertebrates | |
 | `vertebrate_16S_m2.8` | invertebrates | |
-| `vertebrate_COI-5P_m2.4` | invertebrates, fungi, plants, protists | |
+| `vertebrate_COI-5P_m2.3` | invertebrates, fungi, plants, protists | |
 
-Earlier models (`m1`):
-
-| Model | Status |
-|---|---|
-| `bacterial_16S_m1.3` | superseded by `bacterial_16S-V4_m2.x` |
-| `plant_ITS2_m1.4` | superseded by `plant_ITS2_m2.x` |
-
+Version numbers were assigned per training run and are therefore not consecutive across markers; within a marker, a higher number does not imply a better model. Training command, seed, data and hyperparameters of each model are recorded in its `parameters.json` (`training_run`) and training log (`logs/`).
