@@ -1,25 +1,30 @@
 # MetAnoDe
 
-MetAnoDe employs an alignment-free approach that complements existing tools in cleaning up metabarcoding data. The software uses deep neural networks, more specifically a convolutional neural network (CNN) and a long short-term memory network (LSTM), combined into an ensemble model.
+MetAnoDe employs an alignment-free approach that complements existing tools in cleaning up metabarcoding data. The software uses deep neural networks, more specifically a convolutional neural network (CNN) and a long short-term memory network (LSTM), combined into one classifier (the MetAnoDe model).
 
 **Citation:** Keller 2025 EcoEvoRxiv https://doi.org/10.32942/X2792N (peer-review version pending)
 
-Pre-trained models (revision 1, `m2`) are available in the subfolder `models` for:
+Pre-trained models (revision 1, `m2`) are available in the subfolder `models` for 13 markers:
 
-| Marker | Target region (primers) | Off-target classes | Model name | fw primer | rv primer |
-|---|---|---|---|---|---|
-| Bacterial 16S-V4 | 515F/806R, Kozich et al. (2013, https://doi.org/10.1128/AEM.01043-13) | mitochondria, plastids | `bacterial_16S-V4_m2.6` | GTGCCAGCMGCCGCGGTAA | GGACTACHVGGGTWTCTAAT |
-| Fungal ITS1 | ITS1F (Gardes & Bruns 1993) / ITS2 (White et al. 1990) | plants | `fungal_ITS1_m2.8` | CTTGGTCATTTAGAGGAAGTAA | GCTGCGTTCTTCATCGATGC |
-| Fungal ITS2 | fITS7 (Ihrmark et al. 2012) / ITS4 (White et al. 1990) | plants | `fungal_ITS2_m2.4` | GTGARTCATCGAATCTTTG | TCCTCCGCTTATTGATATGC |
-| Plant ITS2 | ITS-S2F / ITS4R, Sickel et al. (2015, https://doi.org/10.1186/s12898-015-0051-y) | fungi | `plant_ITS2_m2.4` | ATGCGATACTTGGTGTGAAT | TCCTCCGCTTATTGATATGC |
-| Plant rbcL | mini-barcode F52/R193, Little (2014) | bryophytes, green algae | `plant_rbcL_m2.2` | GTTGGATTCAAAGCTGGTGTTA | CVGTCCAMACAGTWGTCCATGT |
-| Invertebrate COI-5P | mlCOIintF/jgHCO2198, Leray et al. (2013, https://doi.org/10.1186/1742-9994-10-34) | fungi, plants, protists, vertebrates | `invertebrate_COI-5P_m2.4` | GGWACWGGWTGAACWGTWTAYCCYCC | TAIACYTCIGGRTGICCRAARAAYCA |
-| Metazoan COI-5P | mlCOIintF/jgHCO2198, Leray et al. (2013) | fungi, plants, protists | `metazoan_COI-5P_m2.8` | GGWACWGGWTGAACWGTWTAYCCYCC | TAIACYTCIGGRTGICCRAARAAYCA |
-| Vertebrate COI-5P | mlCOIintF/jgHCO2198, Leray et al. (2013) | invertebrates, fungi, plants, protists | `vertebrate_COI-5P_m2.3` | GGWACWGGWTGAACWGTWTAYCCYCC | TAIACYTCIGGRTGICCRAARAAYCA |
-| Vertebrate 12S | V12S-U | bacteria, invertebrates | `vertebrate_12S_m2.8` | GTGCCAGCNRCCGCGGTYANAC | ATAGTRGGGTATCTAATCCYAGT |
-| Vertebrate 16S | V16S-U | invertebrates | `vertebrate_16S_m2.8` | ACGAGAAGACCCYRYGRARCTT | TCTHRRANAGGATTGCGCTGTTA |
+| Marker | Primers (forward / reverse) | Amplicon (median, bp) | Target class: source, sequences | Off-target classes (sequences) | Model name | fw primer | rv primer |
+|---|---|---|---|---|---|---|---|
+| Bacterial 16S-V3-V4 | 341F / 785R (Klindworth et al. 2013, https://doi.org/10.1093/nar/gks808) | 422 | SILVA 144; 133,858 | mitochondria (56), plastids (788) | `bacterial_16S-V34_m2.9c` | CCTACGGGNGGCWGCAG | GACTACHVGGGTATCTAATCC |
+| Bacterial 16S-V4 | 515F / 806R (Caporaso et al. 2011, https://doi.org/10.1073/pnas.1000080107) | 253 | SILVA 144; 113,184 | mitochondria (128), plastids (346) | `bacterial_16S-V4_m2.9b` | GTGCCAGCMGCCGCGGTAA | GGACTACHVGGGTWTCTAAT |
+| Bacterial 16S-V4-V5 | 515F-Y / 926R (Parada et al. 2016, https://doi.org/10.1111/1462-2920.13023) | 373 | SILVA 144; 126,677 | mitochondria (68), plastids (611), eukaryotes (10,477) | `bacterial_16S-V45_m2.9c` | GTGYCAGCMGCCGCGGTAA | CCGYCAATTYMTTTRAGTTT |
+| Bacterial 16S-V5-V7 | 799F / 1193R (Chelius & Triplett 2001; Bodenhausen et al. 2013, https://doi.org/10.1371/journal.pone.0056329) | 377 | SILVA 144; 120,491 | mitochondria (51), plastids (57) | `bacterial_16S-V57_m2.9c` | AACMGGATTAGATACCCKG | ACGTCATCCCCACCTTCC |
+| Fungal ITS1 | ITS1F / ITS2 (Gardes & Bruns 1993; White et al. 1990) | 260 | GenBank + UNITE (19.02.2025); 99,426 | plants (2,632) | `fungal_ITS1_m2.8` | CTTGGTCATTTAGAGGAAGTAA | GCTGCGTTCTTCATCGATGC |
+| Fungal ITS2 | fITS7 / ITS4 (Ihrmark et al. 2012; White et al. 1990) | 278 | GenBank + UNITE (19.02.2025); 156,235 | plants (21,748) | `fungal_ITS2_m2.4` | GTGARTCATCGAATCTTTG | TCCTCCGCTTATTGATATGC |
+| Plant ITS2 | ITS-S2F / ITS4R (Sickel et al. 2015, https://doi.org/10.1186/s12898-015-0051-y) | 333 | Quaresma et al. (2024); 197,573 | fungi (31,050) | `plant_ITS2_m2.4` | ATGCGATACTTGGTGTGAAT | TCCTCCGCTTATTGATATGC |
+| Plant rbcL | F52 / R193 (Little 2014) | 140 | GenBank; 8,597 | bryophytes (1,015), green algae (123) | `plant_rbcL_m2.2` | GTTGGATTCAAAGCTGGTGTTA | CVGTCCAMACAGTWGTCCATGT |
+| Invertebrate COI-5P | mlCOIintF / jgHCO2198 (Leray et al. 2013, https://doi.org/10.1186/1742-9994-10-34) | 313 | BOLD; 252,710 | vertebrates (20,182), plants (2,295), protists (425), fungi (369) | `invertebrate_COI-5P_m2.4` | GGWACWGGWTGAACWGTWTAYCCYCC | TAIACYTCIGGRTGICCRAARAAYCA |
+| Metazoan COI-5P | mlCOIintF / jgHCO2198 (Leray et al. 2013) | 313 | BOLD; 272,892 | plants (2,295), protists (425), fungi (369) | `metazoan_COI-5P_m2.8` | GGWACWGGWTGAACWGTWTAYCCYCC | TAIACYTCIGGRTGICCRAARAAYCA |
+| Vertebrate COI-5P | mlCOIintF / jgHCO2198 (Leray et al. 2013) | 313 | BOLD; 20,182 | invertebrates (20,182), plants (2,295), protists (425), fungi (369) | `vertebrate_COI-5P_m2.3` | GGWACWGGWTGAACWGTWTAYCCYCC | TAIACYTCIGGRTGICCRAARAAYCA |
+| Vertebrate 12S | V12S-U (Wang et al. 2023) | 160 | GenBank; 17,415 | invertebrates (2,038), bacteria (5) | `vertebrate_12S_m2.8` | GTGCCAGCNRCCGCGGTYANAC | ATAGTRGGGTATCTAATCCYAGT |
+| Vertebrate 16S | V16S-U (Wang et al. 2023) | 208 | GenBank; 48,450 | invertebrates (3,407) | `vertebrate_16S_m2.8` | ACGAGAAGACCCYRYGRARCTT | TCTHRRANAGGATTGCGCTGTTA |
 
-The `m1` models of earlier versions (`bacterial_16S_m1.3`, `plant_ITS2_m1.4`) were removed due to incompatibility with the latest version; `m1` and `m2` models are not interchangeable. Each model was selected from several training runs of the same marker by hold-out validation and an independent in silico benchmark; version numbers are per training run, so a higher number does not imply a better model. Model selection, versioning and the metadata stored with each model are described in [`models/README_models.md`](models/README_models.md).
+Sequence numbers are unique, primer-trimmed training sequences per class after taxonomically balanced selection, before generation of the anomaly classes (all classes are brought to equal size for training). The updated Earth Microbiome Project primers for V4 (515F-Y, Parada et al. 2016; 806RB, Apprill et al. 2015) define the same amplicon after primer removal, so `bacterial_16S-V4_m2.9b` applies to data generated with either primer pair.
+
+The bacterial 16S model `bacterial_16S-V4_m2.6` of earlier releases (trained on SILVA amplicons without taxonomic balancing) was replaced by `bacterial_16S-V4_m2.9b`, which is consistent with the other bacterial 16S regions and removed fewer valid sequences in the benchmark. The `m1` models of earlier versions (`bacterial_16S_m1.3`, `plant_ITS2_m1.4`) were removed due to incompatibility with the latest version; `m1` and `m2` models are not interchangeable. Each model was selected from several training runs of the same marker by hold-out validation and an independent mock-community benchmark; version numbers are per training run, so a higher number does not imply a better model. Model selection, versioning and the metadata stored with each model are described in [`models/README_models.md`](models/README_models.md).
 
 More models can be trained on demand (see below, or file an issue and tag @chiras).
 
@@ -29,7 +34,7 @@ The script supports both GPU (CUDA) and CPU processing. For predictions with pre
 
 **Recommendation:**
 * **Predictions only:** GPU (CUDA) or CPU (1-2 minutes runtime per run)
-* **Training of new marker models:** GPU (CUDA) strongly recommended (6-7 h on GPU, multiple days on a moderately equipped CPU-only PC; see training section for details)
+* **Training of new marker models:** GPU (CUDA) strongly recommended (0.6 to 23 h on a single GPU for the models above, depending mainly on the number of reference sequences; multiple days on a moderately equipped CPU-only PC; see training section for details)
 
 ## Installation (Docker, recommended)
 
@@ -118,7 +123,7 @@ docker run --gpus all \
 
 Here `-query` is a held-out evaluation set and serves only as a technical test of the prediction step; model performance is reported in `Stats.txt` (hold-out validation) and was assessed independently with an in silico mock-community benchmark.
 
-The `m2` models were trained on Ubuntu 24.04 with GPU support. The software was also tested on Ubuntu 22.04/24.04 with and without GPU support, and on macOS 12.3 without GPU support. Training hardware: Intel i7 with 256 GB RAM and 24 GB NVIDIA RTX 4090. Training took 6-7 h per model. Exact calls of each model are listed in the respective log file in the model directory. 
+The `m2` models were trained on Ubuntu 24.04 workstations with NVIDIA GPUs (RTX 4070 Ti SUPER, RTX 4090 or RTX 5090, 64 to 256 GB RAM). The software was also tested on Ubuntu 22.04/24.04 with and without GPU support, and on macOS 12.3 without GPU support. Training took 0.6 to 23 h per model, increasing mainly with the number of reference sequences. The exact call, inputs, length filter, data split and hyperparameters of each model are recorded in `training_run` of its `parameters.json`.
 
 There is no strict limit on the number or length of reference sequences, or on the number of off-target classes. However, memory for encoding and training can become a constraint depending on the available hardware.
 
