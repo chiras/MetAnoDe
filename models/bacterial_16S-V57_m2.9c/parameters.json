@@ -1,0 +1,153 @@
+{
+    "labels": {
+        "0": "true",
+        "1": "substitution",
+        "2": "indel",
+        "3": "chimera",
+        "4": "bacterial_16S-V57.mitochondria.train",
+        "5": "bacterial_16S-V57.plastids.train"
+    },
+    "n_classes": 6,
+    "chimera_mode": "legacy",
+    "chimera_min_diff": {
+        "frac": 0.03,
+        "abs": 8
+    },
+    "offtargets": [
+        "data/bacteria-new_Silva/V57/bacterial_16S-V57.mitochondria.train.fasta.gz",
+        "data/bacteria-new_Silva/V57/bacterial_16S-V57.plastids.train.fasta.gz"
+    ],
+    "reverse": false,
+    "cnn_input": "embedding",
+    "training_run": {
+        "command_line": "/opt/MetAnoDe/metanode.py -db data/bacteria-new_Silva/V57/bacterial_16S-V57.target.train.fasta.gz -ot data/bacteria-new_Silva/V57/bacterial_16S-V57.mitochondria.train.fasta.gz,data/bacteria-new_Silva/V57/bacterial_16S-V57.plastids.train.fasta.gz -p bacterial_16S-V57_m2.9c -query data/bacteria-new_Silva/V57/bacterial_16S-V57.target.eval.fa -e 400 -seed 42 --len_factors 0.75,1.25 --chimera_mode legacy",
+        "started": "20261030.113119",
+        "seed": 42,
+        "git": {
+            "commit_short": "8f2f288",
+            "commit_full": "8f2f2887dd5c5cbe31ad9ac2fdd9450f35ebffdd",
+            "count": "148",
+            "source": "/opt/MetAnoDe"
+        },
+        "environment": {
+            "python": "3.12.3",
+            "tensorflow": "2.17.0",
+            "keras": "3.3.3",
+            "keras_tuner": "1.4.7",
+            "numpy": "1.26.4",
+            "pandas": "2.2.1",
+            "sklearn": "1.4.2"
+        },
+        "code_sha256": {
+            "metanode.py": "99c43b53973d0a28e348e3734c1a8ab3057c7f4cfee4c237943a832129e32857",
+            "helper.py": "91d0de0254277d4726454e83d71ad576508bfdf2c59b107e7d0f568bf4b0e472",
+            "model_builders.py": "02dd00e614a48e118500c26b1d4eb01f082c26c94f235dc8d892fb6f9b0a069e"
+        },
+        "inputs": {
+            "true_file": {
+                "path": "data/bacteria-new_Silva/V57/bacterial_16S-V57.target.train.fasta.gz",
+                "sha256": "4538e0724c4adc2fd05e288c7ebf1a1527bcb912213aaf9d347c202328e1cad9",
+                "records": 120491
+            },
+            "offtargets": [
+                {
+                    "path": "data/bacteria-new_Silva/V57/bacterial_16S-V57.mitochondria.train.fasta.gz",
+                    "sha256": "2bb130f01ba0aa6c3d0e89bc01cbe0843d0ae351bd6362b3a753b57b7cddeeda",
+                    "records": 51
+                },
+                {
+                    "path": "data/bacteria-new_Silva/V57/bacterial_16S-V57.plastids.train.fasta.gz",
+                    "sha256": "fd6c1d4f47e8bb36daecf64777964719abcca5c5ba72ffacaaa446a41863d228",
+                    "records": 57
+                }
+            ]
+        },
+        "data": {
+            "target_len_arg": null,
+            "length_filter_factors": [
+                0.75,
+                1.25
+            ],
+            "reverse": false,
+            "validation_fraction": 0.25,
+            "max_len": 566,
+            "n_train": 1084416,
+            "n_valid": 361473,
+            "per_class_train": {
+                "0": 180736,
+                "1": 180736,
+                "2": 180736,
+                "3": 180736,
+                "4": 180736,
+                "5": 180736
+            },
+            "per_class_valid": {
+                "0": 60245,
+                "1": 60246,
+                "2": 60246,
+                "3": 60246,
+                "4": 60245,
+                "5": 60245
+            },
+            "split_reused": true
+        },
+        "classes": {
+            "balance_4C": true,
+            "loss": "sparse_categorical_crossentropy",
+            "chimera": {
+                "mode": "legacy",
+                "min_diff_frac": 0.03,
+                "min_diff_abs": 8
+            },
+            "simulation": "not exposed by helper (see code_sha256)"
+        },
+        "training": {
+            "max_epochs": 400,
+            "max_epochs_tuner": 5,
+            "max_epochs_ensemble": 5,
+            "batch_size": 64,
+            "batch_size_ensemble": 16,
+            "early_stopping_patience": 10,
+            "reduce_lr_on_plateau": {
+                "monitor": "val_loss",
+                "factor": 0.5,
+                "patience": 3,
+                "min_lr": 1e-05
+            },
+            "lstm_clipnorm": 0.5,
+            "ensemble_learning_rate": 0.0003,
+            "tuner": "Hyperband (factor 3, objective val_accuracy)",
+            "tuner_overwrite": false,
+            "threads": null
+        },
+        "models": {
+            "CNN": {
+                "hyperparameters": {
+                    "learning_rate": 0.0003,
+                    "filters": 128,
+                    "dropout": 0.5
+                },
+                "best_epoch": 44,
+                "epochs_run": 54,
+                "best_val_accuracy": 0.9874679446220398,
+                "input": "embedding"
+            },
+            "LSTM": {
+                "hyperparameters": {
+                    "learning_rate": 0.0003,
+                    "embeddim": 64,
+                    "units": 64,
+                    "dropout": 0.25
+                },
+                "best_epoch": 49,
+                "epochs_run": 59,
+                "best_val_accuracy": 0.982634961605072
+            },
+            "Ensemble": {
+                "epochs": 5
+            }
+        },
+        "finished": "20261030.214052",
+        "log_file": "models/bacterial_16S-V57_m2.9c/logs/bacterial_16S-V57_m2.9c.20261030.113119.log"
+    }
+}
