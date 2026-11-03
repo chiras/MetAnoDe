@@ -24,4 +24,4 @@ data.old
 data.old/*
 tier3*
 *.bak*
-models/*/val_cache.npz
+models/*/val_cache.npzlogs/
